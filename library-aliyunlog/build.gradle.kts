@@ -1,5 +1,5 @@
 plugins {
-    id("com.android.application")
+    id("com.android.library")
     kotlin("android")
 }
 
@@ -7,13 +7,16 @@ android {
     compileSdk = versions.compileSdk
     buildToolsVersion = versions.buildToolsVersion
 
+    sourceSets.getByName("main") {
+        java.srcDir("src/main/kotlin")
+    }
+
     defaultConfig {
-        applicationId = "io.keyss.library.test"
         minSdk = versions.minSdk
         targetSdk = versions.targetSdk
         versionCode = 1
         versionName = "1.0.0"
-        testInstrumentationRunner = "android.support.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles("consumer-rules.pro")
     }
 
     buildTypes {
@@ -29,11 +32,9 @@ android {
 }
 
 dependencies {
-    testImplementation("junit:junit:4.13.2")
-    androidTestImplementation("androidx.test.ext:junit:1.1.2")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.3.0")
-    implementation(deps.google.material)
-    implementation(deps.ktx.core)
-    implementation(deps.androidx.appcompat)
-    implementation(deps.androidx.constraintlayout)
+    // 阿里云日志
+    api("com.aliyun.openservices:aliyun-log-android-sdk:2.5.16")
 }
+
+// 将library上传到mavenCenter的脚本
+apply("../../public/KeyLibraryMavenCentralUploader.gradle")

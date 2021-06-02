@@ -5,5 +5,16 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
+/*pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}*/
 rootProject.name = "android-common-library"
-include(":app")
+include(
+    ":app",
+    ":library-aliyunlog",
+)
+include(":library-common")

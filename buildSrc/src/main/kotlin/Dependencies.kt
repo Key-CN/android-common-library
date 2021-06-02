@@ -23,7 +23,7 @@ object deps {
     }
 
     object androidx {
-        const val appcompat = "androidx.appcompat:${versions.appcompat}"
+        const val appcompat = "androidx.appcompat:appcompat:${versions.appcompat}"
         const val constraintlayout = "androidx.constraintlayout:constraintlayout:2.0.4"
     }
 
