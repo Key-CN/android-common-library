@@ -20,12 +20,21 @@ object AliyunLogUtil {
 
     private const val ALIYUN_LOG_HZ_END_POINT: String = "http://cn-hangzhou.sls.aliyuncs.com"
     private var mTopic = "AliyunLogUtil"
-    private val mFormatter: DateFormat = SimpleDateFormat("MM-dd HH:mm:ss:SSS", Locale.SIMPLIFIED_CHINESE)
+    private val mFormatter: DateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS", Locale.SIMPLIFIED_CHINESE)
+    private val mUTCFormatter: DateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.SIMPLIFIED_CHINESE).apply {
+        timeZone = TimeZone.getTimeZone("UTC")
+    }
     private lateinit var mConfig: LogProducerConfig
     private lateinit var mClient: LogProducerClient
     private lateinit var mUpdateSTSBlock: () -> AliYunLogSTSBean?
     private lateinit var mContentBlock: (com.aliyun.sls.android.producer.Log) -> Unit
     private val logList = LinkedList<com.aliyun.sls.android.producer.Log>()
+
+    // 一些记录型属于，用于分析BUG
+    private var resetSecurityTokenTimes = 0
+    private var callApiSuccessTimes = 0
+    private var callApiFailuresTimes = 0
+    private var callNextTimes = 0
 
 
     /** 是否立即发送 */
@@ -42,6 +51,7 @@ object AliyunLogUtil {
 
     /**
      * 初始化，必要的设置放进入参
+     * @param updateSTSBlock 在子线程内执行，接口不需要加suspend了
      */
     fun init(
         context: Context,
@@ -144,17 +154,21 @@ object AliyunLogUtil {
     }
 
     private fun continuousUpdateToken() {
-        val sts = try {
-            mUpdateSTSBlock()
+        val sts: AliYunLogSTSBean? = try {
+            val stsBean = mUpdateSTSBlock()
+            callApiSuccessTimes++
+            stsBean
         } catch (e: Exception) {
             e.printStackTrace()
+            callApiFailuresTimes++
             null
         }
         if (sts == null) {
             isSendNow = 0
         } else {
-            //i("sts获取成功，开始更新token")
+            // java.lang.OutOfMemoryError: Could not allocate JNI Env
             mConfig.resetSecurityToken(sts.accessKeyId, sts.accessKeySecret, sts.securityToken)
+            resetSecurityTokenTimes++
             // 鉴权成功则改为立刻发送
             isSendNow = 1
             if (!AliyunLogUtil::mClient.isInitialized) {
@@ -162,14 +176,28 @@ object AliyunLogUtil {
             }
             sendCacheLog()
         }
-        nextUpdateToken(sts != null)
+        nextUpdateToken(sts)
     }
 
-    private fun nextUpdateToken(isCurrentSuccessful: Boolean): Unit {
+    private fun nextUpdateToken(sts: AliYunLogSTSBean?) {
+        callNextTimes++
         thread {
             // 有效期半小时，失败的话就1分钟后重试
-            val nextTime = 60L * 1_000 * (if (isCurrentSuccessful) 25 else 1)
-            printLogcat(Log.VERBOSE, "下一次更新aliyun log sts token的时间将在${nextTime}毫秒之后")
+            val nextTime = if (sts != null) {
+                try {
+                    // 提前5分钟
+                    mUTCFormatter.parse(sts.expiration)!!.time - System.currentTimeMillis() - 5 * 60 * 1_000L
+                } catch (e: Exception) {
+                    // 默认成功就给25分钟
+                    25 * 60 * 1_000L
+                }
+            } else {
+                60L * 1_000
+            }
+            printLogcat(
+                Log.VERBOSE,
+                "下一次更新aliyun log sts token的时间将在${nextTime / 1000 / 60}分钟之后，API调用成功${callApiSuccessTimes}次，失败${callApiFailuresTimes}次，执行下一次等候${callNextTimes}次，resetSecurityToken${resetSecurityTokenTimes}次"
+            )
             SystemClock.sleep(nextTime)
             continuousUpdateToken()
         }
@@ -238,7 +266,7 @@ object AliyunLogUtil {
     private fun pushLog(msg: String, level: String) {
         val aliyunLog = com.aliyun.sls.android.producer.Log()
         aliyunLog.putContent("Message", msg)
-        aliyunLog.putContent("CreateTime", mFormatter.format(Date()))
+        aliyunLog.putContent("LocalTime", mFormatter.format(Date()))
         aliyunLog.putContent("Level", level)
         if (AliyunLogUtil::mContentBlock.isInitialized) {
             mContentBlock(aliyunLog)
