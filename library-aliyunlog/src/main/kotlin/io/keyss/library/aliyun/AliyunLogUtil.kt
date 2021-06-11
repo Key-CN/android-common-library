@@ -36,9 +36,9 @@ object AliyunLogUtil {
     private var callApiFailuresTimes = 0
     private var callNextTimes = 0
 
-
-    /** 是否立即发送 */
+    /** 是否立即发送，1立即发，0稍后在发，同时也代表token有效 */
     private var isSendNow = 0
+    private var isTokenValid = false
 
     /** 上传日志的等级 */
     var uploadLevel = INFO
@@ -83,24 +83,24 @@ object AliyunLogUtil {
         // 设置主题
         mConfig.setTopic(mTopic)
         // 设置tag信息，此tag会附加在每条日志上，默认只有一条 __client_ip__:36.27.84.11
-
+        //mConfig.addTag()
         // 每个缓存的日志包的大小上限，取值为1~5242880，单位为字节。默认为1024 * 1024
-        mConfig.setPacketLogBytes(1024 * 1024)
+        //mConfig.setPacketLogBytes(1024 * 1024)
         // 每个缓存的日志包中包含日志数量的最大值，取值为1~4096，默认为1024
-        mConfig.setPacketLogCount(1024)
+        //mConfig.setPacketLogCount(1024)
         // 被缓存日志的发送超时时间，如果缓存超时，则会被立即发送，单位为毫秒，默认为3000
-        mConfig.setPacketTimeout(3000)
+        //mConfig.setPacketTimeout(3000)
         // 单个Producer Client实例可以使用的内存的上限，超出缓存时add_log接口会立即返回失败
         // 默认为64 * 1024 * 1024
-        mConfig.setMaxBufferLimit(128 * 1024 * 1024)
+        //mConfig.setMaxBufferLimit(64 * 1024 * 1024)
         // 发送线程数，默认为1
-        mConfig.setSendThreadCount(5)
+        //mConfig.setSendThreadCount(3)
         // 1 开启断点续传功能， 0 关闭
         // 每次发送前会把日志保存到本地的binlog文件，只有发送成功才会删除，保证日志上传At Least Once
         mConfig.setPersistent(1)
         // 持久化的文件名，需要保证文件所在的文件夹已创建。配置多个客户端时，不应设置相同文件
         mConfig.setPersistentFilePath(File(context.filesDir, "aliyunlog.dat").absolutePath)
-        // 是否每次AddLog强制刷新，高可靠性场景建议打开
+        // 是否每次AddLog强制刷新，高可靠性场景建议打开 1开0关
         mConfig.setPersistentForceFlush(1)
         // 持久化文件滚动个数，建议设置成10。
         mConfig.setPersistentMaxFileCount(10)
@@ -165,12 +165,14 @@ object AliyunLogUtil {
         }
         if (sts == null) {
             isSendNow = 0
+            isTokenValid = false
         } else {
             // java.lang.OutOfMemoryError: Could not allocate JNI Env
             mConfig.resetSecurityToken(sts.accessKeyId, sts.accessKeySecret, sts.securityToken)
             resetSecurityTokenTimes++
             // 鉴权成功则改为立刻发送
             isSendNow = 1
+            isTokenValid = true
             if (!AliyunLogUtil::mClient.isInitialized) {
                 createClient()
             }
@@ -185,9 +187,11 @@ object AliyunLogUtil {
             // 有效期半小时，失败的话就1分钟后重试
             val nextTime = if (sts != null) {
                 try {
-                    // 提前5分钟
-                    mUTCFormatter.parse(sts.expiration)!!.time - System.currentTimeMillis() - 5 * 60 * 1_000L
-                } catch (e: Exception) {
+                    // 提前5分钟，且至少大于1分钟
+                    (mUTCFormatter.parse(sts.expiration)!!.time - System.currentTimeMillis() - 5 * 60 * 1_000L).takeIf { it > 60L * 1_000 }
+                        ?: throw Exception("过期时间数据不正确，expiration=${sts.expiration}")
+                } catch (exc: Exception) {
+                    e("解析过期时间异常", exc)
                     // 默认成功就给25分钟
                     25 * 60 * 1_000L
                 }
@@ -271,7 +275,7 @@ object AliyunLogUtil {
         if (AliyunLogUtil::mContentBlock.isInitialized) {
             mContentBlock(aliyunLog)
         }
-        if (AliyunLogUtil::mClient.isInitialized) {
+        if (AliyunLogUtil::mClient.isInitialized && isTokenValid) {
             sendLog(aliyunLog)
         } else {
             cacheLog(aliyunLog)
@@ -293,6 +297,16 @@ object AliyunLogUtil {
 
     /** 缓存日志 */
     private fun cacheLog(aliyunLog: com.aliyun.sls.android.producer.Log) {
+        synchronized(this) {
+            if (logList.size > 512) {
+                logList.removeAll {
+                    it.content["Level"]?.let { level ->
+                        level != "WARN" && level != "ERROR"
+                    } == true
+                }
+                w("缓存日志已超过512条，清空已缓存的低等级日志，剩余${logList.size}条")
+            }
+        }
         // 后面看吧，如果重复率太高可以去一下重
         //aliyunLog.content["Message"]
         logList.add(aliyunLog)
