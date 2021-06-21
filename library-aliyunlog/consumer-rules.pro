@@ -1,2 +1,3 @@
 -keep class com.aliyun.sls.android.producer.* { *; }
 -keep interface com.aliyun.sls.android.producer.* { *; }
+-keep class io.keyss.library.aliyun.AliYunLogSTSBean

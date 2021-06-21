@@ -18,7 +18,8 @@ object AliyunLogUtil {
     const val WARN = Log.WARN
     const val ERROR = Log.ERROR
 
-    private const val ALIYUN_LOG_HZ_END_POINT: String = "http://cn-hangzhou.sls.aliyuncs.com"
+    /** 杭州节点，公网入口 */
+    private const val ALIYUN_LOG_HZ_END_POINT: String = "cn-hangzhou.log.aliyuncs.com"
     private var mTopic = "AliyunLogUtil"
     private val mFormatter: DateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS", Locale.SIMPLIFIED_CHINESE)
     private val mUTCFormatter: DateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.SIMPLIFIED_CHINESE).apply {

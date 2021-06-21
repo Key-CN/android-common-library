@@ -14,8 +14,8 @@ android {
     defaultConfig {
         minSdk = versions.minSdk
         targetSdk = versions.targetSdk
-        versionCode = 3
-        versionName = "1.0.2"
+        versionCode = 4
+        versionName = "1.0.3"
         consumerProguardFiles("consumer-rules.pro")
     }
 
@@ -33,7 +33,7 @@ android {
 
 dependencies {
     // 阿里云日志
-    api("com.aliyun.openservices:aliyun-log-android-sdk:2.5.18")
+    api("com.aliyun.openservices:aliyun-log-android-sdk:2.5.22")
 }
 
 // 将library上传到mavenCenter的脚本
