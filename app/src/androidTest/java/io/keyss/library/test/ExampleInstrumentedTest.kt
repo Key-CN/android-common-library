@@ -1,8 +1,6 @@
 package io.keyss.library.test
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
-import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -15,8 +13,13 @@ import org.junit.runner.RunWith
 class ExampleInstrumentedTest {
     @Test
     fun useAppContext() {
-        // Context of the app under test.
-        val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        assertEquals("io.keyss.library.test", appContext.packageName)
+        val exec = Runtime.getRuntime().exec("ifconfig")
+        exec.inputStream.bufferedReader().use {
+            var i = 1
+            it.forEachLine { lineStr ->
+                println("Line $i: $lineStr")
+                i++
+            }
+        }
     }
 }

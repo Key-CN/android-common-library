@@ -5,7 +5,7 @@ plugins {
 
 android {
     compileSdk = versions.compileSdk
-    buildToolsVersion = versions.buildToolsVersion
+    buildToolsVersion = versions.buildTools
 
     sourceSets.getByName("main") {
         java.srcDir("src/main/kotlin")
@@ -33,7 +33,7 @@ android {
 
 dependencies {
     // 阿里云日志
-    api("com.aliyun.openservices:aliyun-log-android-sdk:2.5.22")
+    api("com.aliyun.openservices:aliyun-log-android-sdk:2.5.24")
 }
 
 // 将library上传到mavenCenter的脚本

@@ -5,7 +5,7 @@ plugins {
 
 android {
     compileSdk = versions.compileSdk
-    buildToolsVersion = versions.buildToolsVersion
+    buildToolsVersion = versions.buildTools
 
     sourceSets.getByName("main") {
         java.srcDir("src/main/kotlin")
@@ -14,8 +14,8 @@ android {
     defaultConfig {
         minSdk = versions.minSdk
         targetSdk = versions.targetSdk
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.0.2"
         consumerProguardFiles("consumer-rules.pro")
     }
 
@@ -32,7 +32,8 @@ android {
 }
 
 dependencies {
-    //
+    // androidx
+    compileOnly(deps.androidx.appcompat)
 }
 
 // 将library上传到mavenCenter的脚本

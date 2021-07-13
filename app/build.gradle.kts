@@ -5,7 +5,7 @@ plugins {
 
 android {
     compileSdk = versions.compileSdk
-    buildToolsVersion = versions.buildToolsVersion
+    buildToolsVersion = versions.buildTools
 
     defaultConfig {
         applicationId = "io.keyss.library.test"
@@ -36,4 +36,6 @@ dependencies {
     implementation(deps.ktx.core)
     implementation(deps.androidx.appcompat)
     implementation(deps.androidx.constraintlayout)
+    implementation(deps.kotlin.coroutines_android)
+    implementation(project(":library-common"))
 }
