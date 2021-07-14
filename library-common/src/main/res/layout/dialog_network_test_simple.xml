@@ -1,13 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.appcompat.widget.LinearLayoutCompat xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="wrap_content"
-    android:layout_height="wrap_content">
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
 
     <androidx.appcompat.widget.AppCompatTextView
-        android:textSize="20sp"
-        android:layout_margin="26dp"
-        android:id="@+id/tv_simple_test_network_dialog"
+        android:id="@+id/tv_title_simple_test_network_dialog"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="测试中..." />
-</FrameLayout>
+        android:layout_gravity="center_horizontal"
+        android:layout_marginStart="36dp"
+        android:layout_marginTop="26dp"
+        android:layout_marginEnd="36dp"
+        android:layout_marginBottom="26dp"
+        android:text="测试中..."
+        android:textColor="@android:color/black"
+        android:textSize="22sp" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tv_detail_simple_test_network_dialog"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginStart="36dp"
+        android:layout_marginEnd="36dp"
+        android:layout_marginBottom="26dp"
+        android:textSize="16sp"
+        android:visibility="gone" />
+</androidx.appcompat.widget.LinearLayoutCompat>

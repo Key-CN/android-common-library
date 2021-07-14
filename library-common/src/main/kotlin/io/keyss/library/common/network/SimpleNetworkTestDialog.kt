@@ -16,12 +16,17 @@ import kotlinx.coroutines.withContext
  * Time: 2021/07/07 17:39
  * Description:
  */
-class SimpleNetworkTestDialog(specifiedDestination: String? = null) : DialogFragment() {
-    lateinit var mTextView: AppCompatTextView
+class SimpleNetworkTestDialog(
+    private val specifiedDestination: String? = null,
+    private val resultBlock: ((NetworkUtil.TestResult) -> Unit)? = null
+) : DialogFragment() {
+    lateinit var mTvTitle: AppCompatTextView
+    lateinit var mTvDetail: AppCompatTextView
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.dialog_network_test_simple, container, false)
-        mTextView = view.findViewById<AppCompatTextView>(R.id.tv_simple_test_network_dialog)
+        mTvTitle = view.findViewById<AppCompatTextView>(R.id.tv_title_simple_test_network_dialog)
+        mTvDetail = view.findViewById<AppCompatTextView>(R.id.tv_detail_simple_test_network_dialog)
         return view
     }
 
@@ -29,9 +34,27 @@ class SimpleNetworkTestDialog(specifiedDestination: String? = null) : DialogFrag
         super.onViewCreated(view, savedInstanceState)
         lifecycleScope.launchWhenResumed {
             val result = withContext(Dispatchers.IO) {
-                NetworkUtil.executeTesting()
+                NetworkUtil.executeTesting(specifiedDestination)
             }
-            mTextView.text = result.getStepDetail()
+            mTvTitle.text = result.getStepDetail()
+            val sb = StringBuilder()
+            result.ip?.takeIf { it.isNotEmpty() }?.let {
+                for (config in it) {
+                    sb.append("\n活跃${config.toHumanString()}")
+                }
+            }
+            if (!result.gateway.isNullOrBlank()) {
+                sb.append("\n网关：${result.gateway}")
+            }
+            result.internetPing?.let {
+                sb.append("\n114丢包率：${it.packetLossRate}")
+            }
+            result.specifiedPing?.let {
+                sb.append("\n${it.destination}丢包率：${it.packetLossRate}")
+            }
+            mTvDetail.text = sb.toString()
+            mTvDetail.visibility = View.VISIBLE
+            resultBlock?.invoke(result)
         }
     }
 }

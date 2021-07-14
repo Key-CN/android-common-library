@@ -16,4 +16,8 @@ data class InterfaceConfig(
     var mask: String = "",
     /** 广播地址 */
     var bcast: String = "",
-)
+) {
+    fun toHumanString(): String {
+        return "网卡：${name}${if (connectionName.isBlank()) "" else "，连接名：${connectionName}"}，IP：$addr"
+    }
+}

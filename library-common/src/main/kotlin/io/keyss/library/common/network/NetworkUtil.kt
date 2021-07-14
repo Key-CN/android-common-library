@@ -112,34 +112,37 @@ object NetworkUtil {
             // 2
 
             val ping = getPing(destination = defaultGateway)
+            // ping不通的结果保留
+            testResult.gatewayPing = ping
             if (ping == null || ping.isUnreachable()) {
                 // ping不通网关,2
                 println("ping不通网关")
                 return@run
             }
-            testResult.gatewayPing = ping
             testResult.step++
             // 3
 
             val ping114 = getPing()
+            // ping不通的结果保留
+            testResult.internetPing = ping114
             if (ping114 == null || ping114.isUnreachable()) {
                 // ping不通114,3
                 println("ping不通114")
                 return@run
             }
-            testResult.internetPing = ping114
             testResult.step++
             // 4
 
             specifiedDestination?.takeIf { it.isNotBlank() }?.let {
                 val pingSpecified = getPing(destination = it)
+                // ping不通的结果保留
+                testResult.specifiedDestination = specifiedDestination
+                testResult.specifiedPing = pingSpecified
                 if (pingSpecified == null || pingSpecified.isUnreachable()) {
                     // ping不通指定目的地,4
                     println("ping不通指定目的地, $pingSpecified")
                     return@run
                 }
-                testResult.specifiedDestination = specifiedDestination
-                testResult.specifiedPing = pingSpecified
             }
             // 5
             testResult.step++

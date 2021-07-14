@@ -35,11 +35,15 @@ object AliyunLogUtil {
     private var resetSecurityTokenTimes = 0
     private var callApiSuccessTimes = 0
     private var callApiFailuresTimes = 0
-    private var callNextTimes = 0
 
     /** 是否立即发送，1立即发，0稍后在发，同时也代表token有效 */
     private var isSendNow = 0
+
+    @Volatile
     private var isTokenValid = false
+
+    @Volatile
+    private var isStsUpdating = false
 
     /** 上传日志的等级 */
     var uploadLevel = INFO
@@ -149,13 +153,43 @@ object AliyunLogUtil {
     }
 
     private fun updateToken() {
-        thread {
-            continuousUpdateToken()
+        if (!isStsUpdating) {
+            thread {
+                continuousUpdateToken()
+            }
         }
     }
 
     private fun continuousUpdateToken() {
-        val sts: AliYunLogSTSBean? = try {
+        if (isStsUpdating) {
+            return
+        }
+        isStsUpdating = true
+        var sts: AliYunLogSTSBean? = getAliYunLogSTSBean()
+        while (sts == null) {
+            isSendNow = 0
+            isTokenValid = false
+            // 获取失败的，过1分钟再试
+            e("阿里云STS Token获取失败，1分钟后再试")
+            SystemClock.sleep(60_000)
+            sts = getAliYunLogSTSBean()
+        }
+        // java.lang.OutOfMemoryError: Could not allocate JNI Env
+        mConfig.resetSecurityToken(sts.accessKeyId, sts.accessKeySecret, sts.securityToken)
+        resetSecurityTokenTimes++
+        // 鉴权成功则改为立刻发送
+        isSendNow = 1
+        isTokenValid = true
+        if (!AliyunLogUtil::mClient.isInitialized) {
+            createClient()
+        }
+        expirationTimer(sts)
+        thread { sendCacheLog() }
+        isStsUpdating = false
+    }
+
+    private fun getAliYunLogSTSBean(): AliYunLogSTSBean? {
+        return try {
             val stsBean = mUpdateSTSBlock()
             callApiSuccessTimes++
             stsBean
@@ -164,47 +198,25 @@ object AliyunLogUtil {
             callApiFailuresTimes++
             null
         }
-        if (sts == null) {
-            isSendNow = 0
-            isTokenValid = false
-        } else {
-            // java.lang.OutOfMemoryError: Could not allocate JNI Env
-            mConfig.resetSecurityToken(sts.accessKeyId, sts.accessKeySecret, sts.securityToken)
-            resetSecurityTokenTimes++
-            // 鉴权成功则改为立刻发送
-            isSendNow = 1
-            isTokenValid = true
-            if (!AliyunLogUtil::mClient.isInitialized) {
-                createClient()
-            }
-            sendCacheLog()
-        }
-        nextUpdateToken(sts)
     }
 
-    private fun nextUpdateToken(sts: AliYunLogSTSBean?) {
-        callNextTimes++
+    private fun expirationTimer(sts: AliYunLogSTSBean) {
         thread {
-            // 有效期半小时，失败的话就1分钟后重试
-            val nextTime = if (sts != null) {
-                try {
-                    // 提前5分钟，且至少大于1分钟
-                    (mUTCFormatter.parse(sts.expiration)!!.time - System.currentTimeMillis() - 5 * 60 * 1_000L).takeIf { it > 60L * 1_000 }
-                        ?: throw Exception("过期时间数据不正确，expiration=${sts.expiration}")
-                } catch (exc: Exception) {
-                    e("解析过期时间异常", exc)
-                    // 默认成功就给25分钟
-                    25 * 60 * 1_000L
-                }
-            } else {
-                60L * 1_000
+            val nextTime = try {
+                // 提前5分钟，且至少大于1分钟
+                (mUTCFormatter.parse(sts.expiration)!!.time - System.currentTimeMillis() - 5 * 60 * 1_000L).takeIf { it > 60L * 1_000 }
+                    ?: throw Exception("过期时间数据不正确，expiration=${sts.expiration}")
+            } catch (exc: Exception) {
+                e("解析过期时间异常", exc)
+                // 默认成功就给25分钟
+                25 * 60 * 1_000L
             }
             printLogcat(
                 Log.VERBOSE,
-                "下一次更新aliyun log sts token的时间将在${nextTime / 1000 / 60}分钟之后，API调用成功${callApiSuccessTimes}次，失败${callApiFailuresTimes}次，执行下一次等候${callNextTimes}次，resetSecurityToken${resetSecurityTokenTimes}次"
+                "token将在${nextTime / 1000 / 60}分钟之后过期，API调用成功${callApiSuccessTimes}次，失败${callApiFailuresTimes}次，resetSecurityToken${resetSecurityTokenTimes}次"
             )
             SystemClock.sleep(nextTime)
-            continuousUpdateToken()
+            isTokenValid = false
         }
     }
 
@@ -280,6 +292,7 @@ object AliyunLogUtil {
             sendLog(aliyunLog)
         } else {
             cacheLog(aliyunLog)
+            updateToken()
         }
     }
 
