@@ -8,6 +8,7 @@ object versions {
     const val kotlin_coroutines = "1.5.0"
     const val ktx = "1.6.0"
     const val appcompat = "1.3.0"
+    const val lifecycle = "2.3.1"
 }
 
 object deps {
@@ -34,7 +35,9 @@ object deps {
 
     object androidx {
         const val appcompat = "androidx.appcompat:appcompat:${versions.appcompat}"
-        const val constraintlayout = "androidx.constraintlayout:constraintlayout:2.0.4"
+        const val constraint_layout = "androidx.constraintlayout:constraintlayout:2.0.4"
+        // Lifecycles only (without ViewModel or LiveData)
+        const val lifecycle_only = "androidx.lifecycle:lifecycle-runtime-ktx:${versions.lifecycle}"
     }
 
     object google {

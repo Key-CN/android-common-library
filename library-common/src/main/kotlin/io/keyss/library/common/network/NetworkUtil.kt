@@ -3,13 +3,19 @@ package io.keyss.library.common.network
 import android.content.Context
 import android.content.Intent
 import android.location.LocationManager
+import android.net.ConnectivityManager
+import android.net.LinkAddress
+import android.net.NetworkCapabilities
 import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
+import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import io.keyss.library.common.utils.ShellUtil
 import java.net.Inet4Address
+import java.net.InetAddress
 import java.net.NetworkInterface
 
 
@@ -20,14 +26,55 @@ import java.net.NetworkInterface
  */
 object NetworkUtil {
 
+    data class TestResult(
+        var ip: MutableList<InterfaceConfig>? = null,
+        var gateway: String? = null,
+        var gatewayPing: Ping? = null,
+        /** 默认使用了114 */
+        var internetPing: Ping? = null,
+        var specifiedDestination: String? = null,
+        var specifiedPing: Ping? = null,
+    ) {
+        companion object {
+            const val STEP0 = "无IP"
+            const val STEP1 = "无网关"
+            const val STEP2 = "ping不通网关"
+            const val STEP3 = "ping不通114"
+            const val STEP4 = "ping不通指定目的地"
+            const val STEP5 = "通过"
+            val STEP_DETAILS = arrayOf(STEP0, STEP1, STEP2, STEP3, STEP4, STEP5)
+        }
+
+        var step = 0
+
+        fun getStepDetail(): String {
+            if (step < 0 || step >= STEP_DETAILS.size) {
+                return "获取详情错误"
+            }
+            return STEP_DETAILS[step]
+        }
+    }
+
     data class Ping(
+        val destination: String,
         val originalText: String,
+        var ip: String? = null,
         var packetLossRate: String? = null,
         var min: String? = null,
         var avg: String? = null,
         var max: String? = null,
-        var mdev: String? = null,
+        var mdev: String? = null
     ) {
+        override fun toString(): String {
+            return StringBuilder("${destination}(${ip}): ").apply {
+                if (isUnreachable()) {
+                    append(originalText)
+                } else {
+                    append("丢包率=${packetLossRate}, min=${min}, avg=${avg}, max=${max}, mdev=${mdev}")
+                }
+            }.toString()
+        }
+
         fun isUnreachable(): Boolean {
             return packetLossRate == null || packetLossRate == "100%"
         }
@@ -35,19 +82,90 @@ object NetworkUtil {
 
     val ipRegex = "((2[0-4]\\d|25[0-5]|[01]?\\d\\d?)\\.){3}(2[0-4]\\d|25[0-5]|[01]?\\d\\d?)".toRegex()
 
+
+    /**
+     * 整个链路的网络测试
+     */
+    suspend fun executeTesting(specifiedDestination: String? = null): TestResult {
+        val startTimeMillis = System.currentTimeMillis()
+        val testResult = TestResult()
+        kotlin.run {
+            // 1. 先看网络是否连接，是否有IP
+            val interfaceConfigByShell = getInterfaceConfigByShell()
+            if (interfaceConfigByShell.isEmpty()) {
+                // 无IP,0
+                println("无IP")
+                return@run
+            }
+            testResult.ip = interfaceConfigByShell
+            testResult.step++
+            // 1
+
+            val defaultGateway = getDefaultGateway()
+            if (defaultGateway.isNullOrBlank()) {
+                // 无网关,1
+                println("无网关")
+                return@run
+            }
+            testResult.gateway = defaultGateway
+            testResult.step++
+            // 2
+
+            val ping = getPing(destination = defaultGateway)
+            if (ping == null || ping.isUnreachable()) {
+                // ping不通网关,2
+                println("ping不通网关")
+                return@run
+            }
+            testResult.gatewayPing = ping
+            testResult.step++
+            // 3
+
+            val ping114 = getPing()
+            if (ping114 == null || ping114.isUnreachable()) {
+                // ping不通114,3
+                println("ping不通114")
+                return@run
+            }
+            testResult.internetPing = ping114
+            testResult.step++
+            // 4
+
+            specifiedDestination?.takeIf { it.isNotBlank() }?.let {
+                val pingSpecified = getPing(destination = it)
+                if (pingSpecified == null || pingSpecified.isUnreachable()) {
+                    // ping不通指定目的地,4
+                    println("ping不通指定目的地, $pingSpecified")
+                    return@run
+                }
+                testResult.specifiedDestination = specifiedDestination
+                testResult.specifiedPing = pingSpecified
+            }
+            // 5
+            testResult.step++
+        }
+
+        println("测试结束, 耗时: ${System.currentTimeMillis() - startTimeMillis}ms")
+        return testResult
+    }
+
+
     /**
      * 没有无符号类型，请手动指定参数在0以上
      * timeout可以带小数点，但是没有意义
      * 不通的总时长 = timeout + interval * (count - 1)
      */
-    fun getPing(count: Int = 20, interval: Float = 0.2F, timeout: Int = 5, destination: String = "114.114.114.114"): Ping? {
+    fun getPing(count: Int = 10, interval: Float = 0.2F, timeout: Int = 5, destination: String = "114.114.114.114"): Ping? {
         val shellResult = ShellUtil.executeShell("ping -c $count -i $interval -q -W $timeout $destination")
         //--- 114.114.114.114 ping statistics ---
         //20 packets transmitted, 20 received, 0% packet loss, time 3811ms
         //rtt min/avg/max/mdev = 21.565/22.606/25.142/0.792 ms
         //println(shellResult)
         if (shellResult.success) {
-            val ping = Ping(shellResult.text)
+            val ping = Ping(destination, shellResult.text)
+            ipRegex.find(ping.originalText)?.value?.takeIf { it.isNotBlank() }?.let {
+                ping.ip = it
+            }
             // connect: Network is unreachable
             if (ping.originalText.contains("packet loss", true)) {
                 "(\\d+)%".toRegex().find(ping.originalText)?.let {
@@ -64,6 +182,7 @@ object NetworkUtil {
                 return ping
             }
         }
+        println("gePing执行错误结果：${shellResult}")
         return null
     }
 
@@ -71,7 +190,7 @@ object NetworkUtil {
      * 获取路由网关IP地址
      */
     fun getDefaultGateway(): String? {
-        val shellResult = ShellUtil.executeShell("/bin/sh", "-c", "ip route list table 0 | grep 'default via'")
+        val shellResult = ShellUtil.executeShell("sh", "-c", "ip route list table 0 | grep 'default via'")
 
         return if (shellResult.success) {
             ipRegex.find(shellResult.text)?.value
@@ -83,6 +202,61 @@ object NetworkUtil {
 
     fun getWifiInfo(context: Context): WifiInfo? {
         return ContextCompat.getSystemService(context, WifiManager::class.java)?.connectionInfo
+    }
+
+    /**
+     * 获取当前活跃的网卡信息，双网卡是一般为eth
+     */
+    @RequiresApi(Build.VERSION_CODES.M)
+    fun getActiveInterfaceConfig(context: Context, isEthernetFirst: Boolean = true): InterfaceConfig? {
+        var ifconfig: InterfaceConfig? = null
+        val cm = ContextCompat.getSystemService(context, ConnectivityManager::class.java)
+        if (cm != null) {
+            ifconfig = try {
+                val network = cm.activeNetwork
+                cm.getLinkProperties(network)?.let { linkProperties ->
+                    // 获取接口名
+                    linkProperties.interfaceName?.takeIf { it.isNotBlank() }?.let {
+                        InterfaceConfig(it)
+                    }
+                        ?.apply {
+                            // 获取IP
+                            getIPv4Address(linkProperties.linkAddresses)?.let {
+                                addr = it
+                            }
+                        }
+                        ?.apply {
+                            cm.getNetworkCapabilities(network)?.let { networkCapabilities ->
+                                connectionName = when {
+                                    networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> {
+                                        // 移除前后两个引号
+                                        getWifiInfo(context)?.ssid?.removeSurrounding("\"", "\"") ?: "未获取到Wi-Fi名"
+                                    }
+                                    networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> "以太网"
+                                    else -> networkCapabilities.toString()
+                                }
+                            }
+                        }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                null
+            }
+        }
+        if (ifconfig == null) {
+            (getInterfaceConfigByShell().takeIf { it.isNotEmpty() } ?: getInterfaceConfigByApi().takeIf { it.isNotEmpty() })?.let {
+                if (it.size == 1) {
+                    ifconfig = it[0]
+                } else {
+                    for (interfaceConfig in it) {
+                        if (ifconfig == null || (isEthernetFirst && interfaceConfig.name.startsWith("eth"))) {
+                            ifconfig = interfaceConfig
+                        }
+                    }
+                }
+            }
+        }
+        return ifconfig
     }
 
     /**
@@ -145,16 +319,7 @@ object NetworkUtil {
                 if (!ni.isUp || ni.isLoopback) continue
                 // Enumeration 无法判空
                 for (inetAddress in ni.inetAddresses) {
-                    if (!inetAddress.isLoopbackAddress && inetAddress is Inet4Address) {
-                        /*println(
-                            "${inetAddress::class} - name=${ni.name}, " +
-                                    "isLoopback=${ni.isLoopback}, " +
-                                    "isUp=${ni.isUp}, " +
-                                    "isVirtual=${ni.isVirtual}, " +
-                                    "supportsMulticast=${ni.supportsMulticast()}, " +
-                                    "displayName=${ni.displayName}, " +
-                                    "getIPAddress Inet4Address=$inetAddress, hostName=${inetAddress.hostName}, hostAddress=${inetAddress.hostAddress}"
-                        )*/
+                    if (inetAddress.isIPv4AndNotLoopback()) {
                         list.add(InterfaceConfig(ni.name, inetAddress.hostAddress))
                         continue
                     }
@@ -164,6 +329,30 @@ object NetworkUtil {
         return list
     }
 
+    @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
+    fun getIPv4Address(addresses: List<LinkAddress>): String? {
+        if (addresses.isNotEmpty()) {
+            for (linkAddress in addresses) {
+                linkAddress.address.let {
+                    if (it.isIPv4AndNotLoopback()) {
+                        return it.hostAddress
+                    }
+                }
+            }
+        }
+        return null
+    }
+
+    /**
+     * 非回路IPv4的地址
+     */
+    fun InetAddress.isIPv4AndNotLoopback(): Boolean {
+        return !isLoopbackAddress && this.isIPv4()
+    }
+
+    fun InetAddress.isIPv4(): Boolean {
+        return this is Inet4Address
+    }
 
     @JvmStatic
     fun isGpsOpen(context: Context): Boolean {

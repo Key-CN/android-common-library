@@ -16,7 +16,11 @@ object ShellUtil {
             return Result(false, "命令不可以为空")
         }
         val runtime = Runtime.getRuntime()
-        val process = if (cmd.size == 1) runtime.exec(cmd[0]) else runtime.exec(cmd)
+        val process = try {
+            if (cmd.size == 1) runtime.exec(cmd[0]) else runtime.exec(cmd)
+        } catch (e: Exception) {
+            return Result(false, "命令执行错误：${e}")
+        }
         val normalText = try {
             process.inputStream.bufferedReader().use { br ->
                 br.readText()
@@ -39,7 +43,7 @@ object ShellUtil {
                 process.exitValue()
                 false
             } catch (e: IllegalThreadStateException) {
-                e.printStackTrace()
+                //e.printStackTrace()
                 true
             }
         ) {

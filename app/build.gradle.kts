@@ -35,7 +35,8 @@ dependencies {
     implementation(deps.google.material)
     implementation(deps.ktx.core)
     implementation(deps.androidx.appcompat)
-    implementation(deps.androidx.constraintlayout)
+    implementation(deps.androidx.constraint_layout)
+    implementation(deps.androidx.lifecycle_only)
     implementation(deps.kotlin.coroutines_android)
     implementation(project(":library-common"))
 }

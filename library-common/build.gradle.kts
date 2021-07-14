@@ -14,8 +14,8 @@ android {
     defaultConfig {
         minSdk = versions.minSdk
         targetSdk = versions.targetSdk
-        versionCode = 2
-        versionName = "1.0.2"
+        versionCode = 3
+        versionName = "1.0.3"
         consumerProguardFiles("consumer-rules.pro")
     }
 
@@ -34,6 +34,9 @@ android {
 dependencies {
     // androidx
     compileOnly(deps.androidx.appcompat)
+    // 协程支援一下
+    compileOnly(deps.kotlin.coroutines_android)
+    compileOnly(deps.androidx.lifecycle_only)
 }
 
 // 将library上传到mavenCenter的脚本
