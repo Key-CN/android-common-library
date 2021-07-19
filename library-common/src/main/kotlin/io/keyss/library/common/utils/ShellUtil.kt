@@ -60,7 +60,12 @@ object ShellUtil {
 
     fun executeShell(cmd: String, inputBlock: (br: BufferedReader) -> Unit, errorBlock: ((br: BufferedReader) -> Unit)? = null) {
         val runtime = Runtime.getRuntime()
-        val process = runtime.exec(cmd)
+        val process = try {
+            runtime.exec(cmd)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return
+        }
         try {
             process.inputStream.bufferedReader().use { br ->
                 inputBlock(br)

@@ -5,6 +5,7 @@ import android.os.SystemClock
 import android.util.Log
 import com.aliyun.sls.android.producer.LogProducerClient
 import com.aliyun.sls.android.producer.LogProducerConfig
+import com.aliyun.sls.android.producer.LogProducerResult
 import java.io.File
 import java.text.DateFormat
 import java.text.SimpleDateFormat
@@ -29,6 +30,7 @@ object AliyunLogUtil {
     private lateinit var mClient: LogProducerClient
     private lateinit var mUpdateSTSBlock: () -> AliYunLogSTSBean?
     private lateinit var mContentBlock: (com.aliyun.sls.android.producer.Log) -> Unit
+    private var mConfigBlock: ((config: LogProducerConfig) -> Unit)? = null
     private val logList = LinkedList<com.aliyun.sls.android.producer.Log>()
 
     // 一些记录型属于，用于分析BUG
@@ -75,7 +77,21 @@ object AliyunLogUtil {
         AliyunLogUtil.uploadLevel = uploadLevel
         AliyunLogUtil.printLevel = printLevel
         AliyunLogUtil.isPrintLogcat = isPrintLogcat
-        mConfig = LogProducerConfig(
+        mConfigBlock = configBlock
+        mConfig = createConfig(context, aliyunLogEndPoint, projectName, logStoreName)
+        mContentBlock = contentBlock
+        mUpdateSTSBlock = updateSTSBlock
+        updateToken()
+    }
+
+    private fun createConfig(
+        context: Context,
+        aliyunLogEndPoint: String,
+        projectName: String,
+        logStoreName: String,
+        accessKeyID: String = "", accessKeySecret: String = "", securityToken: String = ""
+    ): LogProducerConfig {
+        val config = LogProducerConfig(
             context,
             aliyunLogEndPoint,
             projectName,
@@ -86,7 +102,7 @@ object AliyunLogUtil {
         // 指定sts token 创建config，过期之前调用resetSecurityToken重置token
         // LogProducerConfig config = new LogProducerConfig(endpoint, project, logstore, accesskeyid, accesskeysecret, securityToken);
         // 设置主题
-        mConfig.setTopic(mTopic)
+        config.setTopic(mTopic)
         // 设置tag信息，此tag会附加在每条日志上，默认只有一条 __client_ip__:36.27.84.11
         //mConfig.addTag()
         // 每个缓存的日志包的大小上限，取值为1~5242880，单位为字节。默认为1024 * 1024
@@ -102,53 +118,51 @@ object AliyunLogUtil {
         //mConfig.setSendThreadCount(3)
         // 1 开启断点续传功能， 0 关闭
         // 每次发送前会把日志保存到本地的binlog文件，只有发送成功才会删除，保证日志上传At Least Once
-        mConfig.setPersistent(1)
+        config.setPersistent(1)
         // 持久化的文件名，需要保证文件所在的文件夹已创建。配置多个客户端时，不应设置相同文件
-        mConfig.setPersistentFilePath(File(context.filesDir, "aliyunlog.dat").absolutePath)
+        config.setPersistentFilePath(File(context.filesDir, "aliyunlog.dat").absolutePath)
         // 是否每次AddLog强制刷新，高可靠性场景建议打开 1开0关
-        mConfig.setPersistentForceFlush(1)
+        config.setPersistentForceFlush(1)
         // 持久化文件滚动个数，建议设置成10。
-        mConfig.setPersistentMaxFileCount(10)
+        config.setPersistentMaxFileCount(10)
         // 每个持久化文件的大小，建议设置成1-10M
-        mConfig.setPersistentMaxFileSize(1024 * 1024)
+        config.setPersistentMaxFileSize(1024 * 1024)
         // 本地最多缓存的日志数，不建议超过1M，通常设置为65536即可
-        mConfig.setPersistentMaxLogCount(65536)
+        config.setPersistentMaxLogCount(65536)
         // 自定义设置放最后，可以覆盖默认设置
-        configBlock(mConfig)
-        mContentBlock = contentBlock
-        mUpdateSTSBlock = updateSTSBlock
-        updateToken()
+        mConfigBlock?.invoke(config)
+        return config
     }
 
-    private fun createClient() {
+    private fun createClient(config: LogProducerConfig) {
         // 回调函数不填，默认无回调
         // 未找到老版本的鉴权过期（Unauthorized）错误码，所以暂时无法做成被动式
-        mClient = LogProducerClient(mConfig) /*{ resultCode, reqId, errorMessage, logBytes, compressedBytes -> // 回调
+        mClient = LogProducerClient(config) { resultCode, reqId, errorMessage, logBytes, compressedBytes -> // 回调
             // resultCode       返回结果代码
             // reqId            请求id
             // errorMessage     错误信息，没有为null
             // logBytes         日志大小
             // compressedBytes  压缩后日志大小
-            if (isDebug) {
-                Log.w(
-                    mTopic,
-                    String.format(
-                        "Log回调 reqId=%s, resultCode=%d, resultCodeString=%s, errorMessage=%s, logBytes=%d, compressedBytes=%d",
-                        reqId,
-                        resultCode,
-                        LogProducerResult.fromInt(resultCode),
-                        errorMessage,
-                        logBytes,
-                        compressedBytes,
-                    )
-                )
-            }
             // {"errorCode":"Unauthorized","errorMessage":"The security token you provided has expired"}
             // LOG_PRODUCER_SEND_UNAUTHORIZED
             if (LogProducerResult.fromInt(resultCode) == LogProducerResult.LOG_PRODUCER_SEND_UNAUTHORIZED) {
+                print(
+                    "日志发送失败：${
+                        String.format(
+                            "Log回调 reqId=%s, resultCode=%d, resultCodeString=%s, errorMessage=%s, logBytes=%d, compressedBytes=%d",
+                            reqId,
+                            resultCode,
+                            LogProducerResult.fromInt(resultCode),
+                            errorMessage,
+                            logBytes,
+                            compressedBytes,
+                        )
+                    }",
+                    ERROR
+                )
                 updateToken()
             }
-        }*/
+        }
         i("日志系统初始化成功")
     }
 
@@ -170,7 +184,7 @@ object AliyunLogUtil {
             isSendNow = 0
             isTokenValid = false
             // 获取失败的，过1分钟再试
-            e("阿里云STS Token获取失败，1分钟后再试")
+            print("阿里云STS Token获取失败，1分钟后再试", WARN)
             SystemClock.sleep(60_000)
             sts = getAliYunLogSTSBean()
         }
@@ -181,7 +195,7 @@ object AliyunLogUtil {
         isSendNow = 1
         isTokenValid = true
         if (!AliyunLogUtil::mClient.isInitialized) {
-            createClient()
+            createClient(mConfig)
         }
         expirationTimer(sts)
         thread { sendCacheLog() }
@@ -207,14 +221,11 @@ object AliyunLogUtil {
                 (mUTCFormatter.parse(sts.expiration)!!.time - System.currentTimeMillis() - 5 * 60 * 1_000L).takeIf { it > 60L * 1_000 }
                     ?: throw Exception("过期时间数据不正确，expiration=${sts.expiration}")
             } catch (exc: Exception) {
-                e("解析过期时间异常", exc)
+                print("解析过期时间异常", ERROR, exc)
                 // 默认成功就给25分钟
                 25 * 60 * 1_000L
             }
-            printLogcat(
-                Log.VERBOSE,
-                "token将在${nextTime / 1000 / 60}分钟之后过期，API调用成功${callApiSuccessTimes}次，失败${callApiFailuresTimes}次，resetSecurityToken${resetSecurityTokenTimes}次"
-            )
+            print("token将在${nextTime / 1000 / 60}分钟之后过期，API调用成功${callApiSuccessTimes}次，失败${callApiFailuresTimes}次，resetSecurityToken${resetSecurityTokenTimes}次")
             SystemClock.sleep(nextTime)
             isTokenValid = false
         }
@@ -318,7 +329,12 @@ object AliyunLogUtil {
                         level != "WARN" && level != "ERROR"
                     } == true
                 }
-                w("缓存日志已超过512条，清空已缓存的低等级日志，剩余${logList.size}条")
+                print("缓存日志已超过512条，清空已缓存的低等级日志，剩余${logList.size}条", WARN)
+                // 清除后还大，说明有问题，直接全清
+                if (logList.size >= 512) {
+                    print("清空已缓存的低等级日志后剩余${logList.size}条，执行全清", WARN)
+                    logList.clear()
+                }
             }
         }
         // 后面看吧，如果重复率太高可以去一下重

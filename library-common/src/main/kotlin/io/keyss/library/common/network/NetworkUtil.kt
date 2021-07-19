@@ -14,9 +14,8 @@ import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import io.keyss.library.common.utils.ShellUtil
-import java.net.Inet4Address
-import java.net.InetAddress
-import java.net.NetworkInterface
+import java.io.File
+import java.net.*
 
 
 /**
@@ -25,6 +24,15 @@ import java.net.NetworkInterface
  * Description:
  */
 object NetworkUtil {
+
+    /**
+     * IP address       HW type     Flags       HW address            Mask     Device
+     */
+    data class Arp(
+        val IpAddress: String,
+        val HwAddress: String,
+        val Device: String,
+    )
 
     data class TestResult(
         var ip: MutableList<InterfaceConfig>? = null,
@@ -201,6 +209,42 @@ object NetworkUtil {
             println("getDefaultGateway Error Text: ${shellResult.text}")
             null
         }
+    }
+
+    /**
+     * 获取arp表
+     */
+    fun getArp(): MutableList<Arp>? {
+        getDefaultGateway().takeIf { !it.isNullOrBlank() }?.dropLastWhile { it != '.' }?.let { gatewayPrefix ->
+            val dp = DatagramPacket(ByteArray(0), 0, 0)
+            val socket = DatagramSocket()
+            for (i in 2 until 255) {
+                //GlobalScope.launch(Dispatchers.IO) {
+                val ip = gatewayPrefix + i
+                //val reachable = InetAddress.getByName(ip).isReachable(1000)
+                //println("ip: $ip, reachable=$reachable")
+                dp.address = InetAddress.getByName(ip)
+                socket.send(dp)
+                //}
+            }
+            socket.close()
+            //SystemClock.sleep(7_000)
+            //val shellResult = ShellUtil.executeShell("cat proc/net/arp")
+//            val readText = File("/proc/net/arp").readText()
+//            println("getArp Result: $readText")
+            val regex = "\\s+".toRegex()
+            val list = mutableListOf<Arp>()
+            File("/proc/net/arp").forEachLine { line ->
+                if (line.contains("0x2")) {
+                    line.split(regex).takeIf { it.size == 6 }?.let {
+                        list.add(Arp(it[0], it[3], it[5]))
+                    }
+                }
+            }
+            println(list)
+            return list
+        }
+        return null
     }
 
     fun getWifiInfo(context: Context): WifiInfo? {
