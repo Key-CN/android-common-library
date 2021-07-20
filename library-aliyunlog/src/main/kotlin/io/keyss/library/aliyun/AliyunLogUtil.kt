@@ -73,14 +73,15 @@ object AliyunLogUtil {
         printLevel: Int = VERBOSE,
         aliyunLogEndPoint: String = ALIYUN_LOG_HZ_END_POINT,
     ) {
-        mTopic = topic
-        AliyunLogUtil.uploadLevel = uploadLevel
-        AliyunLogUtil.printLevel = printLevel
-        AliyunLogUtil.isPrintLogcat = isPrintLogcat
-        mConfigBlock = configBlock
-        mConfig = createConfig(context, aliyunLogEndPoint, projectName, logStoreName)
-        mContentBlock = contentBlock
-        mUpdateSTSBlock = updateSTSBlock
+        this.mTopic = topic
+        this.uploadLevel = uploadLevel
+        this.printLevel = printLevel
+        this.isPrintLogcat = isPrintLogcat
+        this.mContentBlock = contentBlock
+        this.mUpdateSTSBlock = updateSTSBlock
+        this.mConfigBlock = configBlock
+        this.mConfig = createConfig(context, aliyunLogEndPoint, projectName, logStoreName)
+        createClient(mConfig)
         updateToken()
     }
 
@@ -163,7 +164,7 @@ object AliyunLogUtil {
                 updateToken()
             }
         }
-        i("日志系统初始化成功")
+        print("日志Client初始化成功")
     }
 
     private fun updateToken() {
@@ -180,21 +181,23 @@ object AliyunLogUtil {
         }
         isStsUpdating = true
         var sts: AliYunLogSTSBean? = getAliYunLogSTSBean()
+        // 重试间隔的秒
+        var intervalSecondRetries: Long = 30
         while (sts == null) {
-            isSendNow = 0
-            isTokenValid = false
             // 获取失败的，过1分钟再试
             print("阿里云STS Token获取失败，1分钟后再试", WARN)
-            SystemClock.sleep(60_000)
+            SystemClock.sleep(intervalSecondRetries * 1_000)
+            intervalSecondRetries += 30
             sts = getAliYunLogSTSBean()
         }
         // java.lang.OutOfMemoryError: Could not allocate JNI Env
         mConfig.resetSecurityToken(sts.accessKeyId, sts.accessKeySecret, sts.securityToken)
         resetSecurityTokenTimes++
+        i("日志系统token重置成功，当前已重置${resetSecurityTokenTimes}次")
         // 鉴权成功则改为立刻发送
         isSendNow = 1
         isTokenValid = true
-        if (!AliyunLogUtil::mClient.isInitialized) {
+        if (!::mClient.isInitialized) {
             createClient(mConfig)
         }
         expirationTimer(sts)
@@ -208,7 +211,7 @@ object AliyunLogUtil {
             callApiSuccessTimes++
             stsBean
         } catch (e: Exception) {
-            e.printStackTrace()
+            print("获取AliYunLogSTS失败", ERROR, e)
             callApiFailuresTimes++
             null
         }
@@ -217,16 +220,18 @@ object AliyunLogUtil {
     private fun expirationTimer(sts: AliYunLogSTSBean) {
         thread {
             val nextTime = try {
-                // 提前5分钟，且至少大于1分钟
-                (mUTCFormatter.parse(sts.expiration)!!.time - System.currentTimeMillis() - 5 * 60 * 1_000L).takeIf { it > 60L * 1_000 }
-                    ?: throw Exception("过期时间数据不正确，expiration=${sts.expiration}")
+                // 提前5分钟，且至少大于1分钟，ParseException
+                val remainingTime = mUTCFormatter.parse(sts.expiration)!!.time - System.currentTimeMillis() - 5 * 60 * 1_000L
+                print("阿里云 sts token 剩余有效期: ${remainingTime / 1000 / 60}分钟")
+                remainingTime.takeIf { it > 60L * 1_000 } ?: throw Exception("过期时间数据不正确，expiration=${sts.expiration}")
             } catch (exc: Exception) {
                 print("解析过期时间异常", ERROR, exc)
                 // 默认成功就给25分钟
                 25 * 60 * 1_000L
             }
-            print("token将在${nextTime / 1000 / 60}分钟之后过期，API调用成功${callApiSuccessTimes}次，失败${callApiFailuresTimes}次，resetSecurityToken${resetSecurityTokenTimes}次")
+            print("token将在${nextTime / 1000 / 60}分钟之后过期，API调用成功${callApiSuccessTimes}次，失败${callApiFailuresTimes}次")
             SystemClock.sleep(nextTime)
+            isSendNow = 0
             isTokenValid = false
         }
     }
@@ -296,14 +301,16 @@ object AliyunLogUtil {
         aliyunLog.putContent("Message", msg)
         aliyunLog.putContent("LocalTime", mFormatter.format(Date()))
         aliyunLog.putContent("Level", level)
-        if (AliyunLogUtil::mContentBlock.isInitialized) {
+        if (::mContentBlock.isInitialized) {
             mContentBlock(aliyunLog)
         }
-        if (AliyunLogUtil::mClient.isInitialized && isTokenValid) {
+        if (::mClient.isInitialized && isTokenValid) {
             sendLog(aliyunLog)
         } else {
             cacheLog(aliyunLog)
-            updateToken()
+            if (!isStsUpdating) {
+                updateToken()
+            }
         }
     }
 

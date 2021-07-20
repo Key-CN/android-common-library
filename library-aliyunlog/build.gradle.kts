@@ -14,8 +14,8 @@ android {
     defaultConfig {
         minSdk = versions.minSdk
         targetSdk = versions.targetSdk
-        versionCode = 7
-        versionName = "1.0.7"
+        versionCode = 8
+        versionName = "1.0.8"
         consumerProguardFiles("consumer-rules.pro")
     }
 
