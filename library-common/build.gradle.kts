@@ -7,6 +7,11 @@ android {
     compileSdk = versions.compileSdk
     buildToolsVersion = versions.buildTools
 
+    buildFeatures {
+        viewBinding = true
+        dataBinding = true
+    }
+
     sourceSets.getByName("main") {
         java.srcDir("src/main/kotlin")
     }
@@ -14,8 +19,8 @@ android {
     defaultConfig {
         minSdk = versions.minSdk
         targetSdk = versions.targetSdk
-        versionCode = 4
-        versionName = "1.0.4"
+        versionCode = 5
+        versionName = "1.0.5"
         consumerProguardFiles("consumer-rules.pro")
     }
 
@@ -37,6 +42,7 @@ dependencies {
     // 协程支援一下
     compileOnly(deps.kotlin.coroutines_android)
     compileOnly(deps.androidx.lifecycle_only)
+    compileOnly(deps.square.okhttp3)
 }
 
 // 将library上传到mavenCenter的脚本

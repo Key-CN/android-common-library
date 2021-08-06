@@ -9,6 +9,8 @@ object versions {
     const val ktx = "1.6.0"
     const val appcompat = "1.3.0"
     const val lifecycle = "2.3.1"
+
+    const val okhttp3 = "4.9.1"
 }
 
 object deps {
@@ -21,6 +23,7 @@ object deps {
 
         // 协程
         const val coroutines_core = "org.jetbrains.kotlinx:kotlinx-coroutines-core:${versions.kotlin_coroutines}"
+
         // 包含core
         const val coroutines_android = "org.jetbrains.kotlinx:kotlinx-coroutines-android:${versions.kotlin_coroutines}"
     }
@@ -36,11 +39,16 @@ object deps {
     object androidx {
         const val appcompat = "androidx.appcompat:appcompat:${versions.appcompat}"
         const val constraint_layout = "androidx.constraintlayout:constraintlayout:2.0.4"
+
         // Lifecycles only (without ViewModel or LiveData)
         const val lifecycle_only = "androidx.lifecycle:lifecycle-runtime-ktx:${versions.lifecycle}"
     }
 
     object google {
         const val material = "com.google.android.material:material:1.3.0"
+    }
+
+    object square {
+        const val okhttp3 = "com.squareup.okhttp3:okhttp:${versions.okhttp3}"
     }
 }
