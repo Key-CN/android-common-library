@@ -16,5 +16,5 @@ rootProject.name = "android-common-library"
 include(
     ":app",
     ":library-aliyunlog",
+    ":library-common"
 )
-include(":library-common")

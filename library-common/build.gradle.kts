@@ -43,6 +43,8 @@ dependencies {
     compileOnly(deps.kotlin.coroutines_android)
     compileOnly(deps.androidx.lifecycle_only)
     compileOnly(deps.square.okhttp3)
+    // viewBinding需要
+    implementation(deps.androidx.annotation)
 }
 
 // 将library上传到mavenCenter的脚本

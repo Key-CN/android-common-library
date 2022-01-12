@@ -4,10 +4,11 @@ object versions {
     const val minSdk = 16
     const val targetSdk = 30
 
-    const val kotlin = "1.5.20"
+    const val kotlin = "1.5.21"
     const val kotlin_coroutines = "1.5.0"
     const val ktx = "1.6.0"
     const val appcompat = "1.3.0"
+    const val annotation = "1.2.0"
     const val lifecycle = "2.3.1"
 
     const val okhttp3 = "4.9.1"
@@ -38,6 +39,7 @@ object deps {
 
     object androidx {
         const val appcompat = "androidx.appcompat:appcompat:${versions.appcompat}"
+        const val annotation = "androidx.annotation:annotation:${versions.annotation}"
         const val constraint_layout = "androidx.constraintlayout:constraintlayout:2.0.4"
 
         // Lifecycles only (without ViewModel or LiveData)
