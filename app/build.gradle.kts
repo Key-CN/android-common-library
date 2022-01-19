@@ -5,8 +5,6 @@ plugins {
 
 android {
     compileSdk = versions.compileSdk
-    buildToolsVersion = versions.buildTools
-
     defaultConfig {
         applicationId = "io.keyss.library.test"
         minSdk = versions.minSdk
@@ -14,6 +12,11 @@ android {
         versionCode = 1
         versionName = "1.0.0"
         testInstrumentationRunner = "android.support.test.runner.AndroidJUnitRunner"
+    }
+
+    buildFeatures {
+        viewBinding = true
+        dataBinding = true
     }
 
     buildTypes {

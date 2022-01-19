@@ -3,9 +3,15 @@ plugins {
     kotlin("android")
 }
 
+val libVersion by extra("1.0.5")
+
 android {
     compileSdk = versions.compileSdk
-    buildToolsVersion = versions.buildTools
+    defaultConfig {
+        minSdk = versions.minSdk
+        targetSdk = versions.targetSdk
+        consumerProguardFiles("consumer-rules.pro")
+    }
 
     buildFeatures {
         viewBinding = true
@@ -14,14 +20,6 @@ android {
 
     sourceSets.getByName("main") {
         java.srcDir("src/main/kotlin")
-    }
-
-    defaultConfig {
-        minSdk = versions.minSdk
-        targetSdk = versions.targetSdk
-        versionCode = 5
-        versionName = "1.0.5"
-        consumerProguardFiles("consumer-rules.pro")
     }
 
     buildTypes {

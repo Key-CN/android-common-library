@@ -3,20 +3,18 @@ plugins {
     kotlin("android")
 }
 
+val libVersion by extra("1.0.8")
+
 android {
     compileSdk = versions.compileSdk
-    buildToolsVersion = versions.buildTools
-
-    sourceSets.getByName("main") {
-        java.srcDir("src/main/kotlin")
-    }
-
     defaultConfig {
         minSdk = versions.minSdk
         targetSdk = versions.targetSdk
-        versionCode = 8
-        versionName = "1.0.8"
         consumerProguardFiles("consumer-rules.pro")
+    }
+
+    sourceSets.getByName("main") {
+        java.srcDir("src/main/kotlin")
     }
 
     buildTypes {

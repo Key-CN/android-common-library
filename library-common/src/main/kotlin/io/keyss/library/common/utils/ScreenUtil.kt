@@ -9,7 +9,7 @@ import android.content.res.Resources
  * Description:
  */
 object ScreenUtil {
-    fun printScreenInfo() {
+    fun printScreenInfo(): String {
         val displayMetrics = Resources.getSystem().displayMetrics
         val pxWidth = displayMetrics.widthPixels // 屏幕宽度（像素）
         val pxHeight = displayMetrics.heightPixels // 屏幕高度（像素）
@@ -20,6 +20,8 @@ object ScreenUtil {
         val dpWidth = pxWidth / density
         val dpHeight = pxHeight / density
 
-        println("屏幕信息： [ 宽度：${pxWidth}px-${dpWidth}dp, 高度：${pxHeight}px-${dpHeight}dp, 密度比：${density}, DPI：${densityDpi} ], $displayMetrics")
+        val message = "屏幕信息： [ 宽度：${pxWidth}px-${dpWidth}dp, 高度：${pxHeight}px-${dpHeight}dp, 密度比：${density}, DPI：${densityDpi} ]\n$displayMetrics"
+        println(message)
+        return message
     }
 }
