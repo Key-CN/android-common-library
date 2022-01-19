@@ -21,6 +21,7 @@ object AliyunLogUtil {
 
     /** 杭州节点，公网入口 */
     private const val ALIYUN_LOG_HZ_END_POINT: String = "cn-hangzhou.log.aliyuncs.com"
+
     private var mTopic = "AliyunLogUtil"
     private val mFormatter: DateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS", Locale.SIMPLIFIED_CHINESE)
     private val mUTCFormatter: DateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.SIMPLIFIED_CHINESE).apply {
@@ -31,12 +32,17 @@ object AliyunLogUtil {
     private lateinit var mUpdateSTSBlock: () -> AliYunLogSTSBean?
     private lateinit var mContentBlock: (com.aliyun.sls.android.producer.Log) -> Unit
     private var mConfigBlock: ((config: LogProducerConfig) -> Unit)? = null
-    private val logList = LinkedList<com.aliyun.sls.android.producer.Log>()
+    private val mLogCacheList = LinkedList<com.aliyun.sls.android.producer.Log>()
 
     // 一些记录型属于，用于分析BUG
     private var resetSecurityTokenTimes = 0
     private var callApiSuccessTimes = 0
     private var callApiFailuresTimes = 0
+
+    /**
+     * 仅本地，不上传
+     */
+    private var isLocal = true
 
     /** 是否立即发送，1立即发，0稍后在发，同时也代表token有效 */
     private var isSendNow = 0
@@ -46,6 +52,11 @@ object AliyunLogUtil {
 
     @Volatile
     private var isStsUpdating = false
+
+    /**
+     * 发送失败的缓存条数，防止死循环
+     */
+    private var mCacheSize = 256
 
     /** 上传日志的等级 */
     var uploadLevel = INFO
@@ -73,6 +84,7 @@ object AliyunLogUtil {
         printLevel: Int = VERBOSE,
         aliyunLogEndPoint: String = ALIYUN_LOG_HZ_END_POINT,
     ) {
+        isLocal = false
         this.mTopic = topic
         this.uploadLevel = uploadLevel
         this.printLevel = printLevel
@@ -264,11 +276,11 @@ object AliyunLogUtil {
     private fun printAndUploadLog(priority: Int, log: String, deeper: Int, tr: Throwable? = null) {
         val logString = formatLogMessage(log, deeper, tr)
         // 输出
-        if (isPrintLogcat && priority >= printLevel) {
+        if (isLocal || isPrintLogcat && priority >= printLevel) {
             printLogcat(priority, logString)
         }
         // 上传
-        if (priority >= uploadLevel) {
+        if (!isLocal && priority >= uploadLevel) {
             pushLog(if (priority >= WARN) logString else log, getLevelString(priority))
         }
     }
@@ -324,29 +336,28 @@ object AliyunLogUtil {
 
     /** 取出一条缓存 */
     private fun popCacheLog(): com.aliyun.sls.android.producer.Log? {
-        return logList.poll()
+        return mLogCacheList.poll()
     }
 
     /** 缓存日志 */
+    @Synchronized
     private fun cacheLog(aliyunLog: com.aliyun.sls.android.producer.Log) {
-        synchronized(this) {
-            if (logList.size > 512) {
-                logList.removeAll {
-                    it.content["Level"]?.let { level ->
-                        level != "WARN" && level != "ERROR"
-                    } == true
-                }
-                print("缓存日志已超过512条，清空已缓存的低等级日志，剩余${logList.size}条", WARN)
-                // 清除后还大，说明有问题，直接全清
-                if (logList.size >= 512) {
-                    print("清空已缓存的低等级日志后剩余${logList.size}条，执行全清", WARN)
-                    logList.clear()
-                }
+        if (mLogCacheList.size > mCacheSize) {
+            mLogCacheList.removeAll {
+                it.content["Level"]?.let { level ->
+                    level != "WARN" && level != "ERROR"
+                } == true
+            }
+            print("缓存日志已超过512条，清空已缓存的低等级日志，剩余${mLogCacheList.size}条", WARN)
+            // 清除后还大，说明有问题，直接全清
+            if (mLogCacheList.size >= mCacheSize) {
+                print("清空已缓存的低等级日志后剩余${mLogCacheList.size}条，执行全清", WARN)
+                mLogCacheList.clear()
             }
         }
         // 后面看吧，如果重复率太高可以去一下重
         //aliyunLog.content["Message"]
-        logList.add(aliyunLog)
+        mLogCacheList.add(aliyunLog)
     }
 
     /** 上传日志 */

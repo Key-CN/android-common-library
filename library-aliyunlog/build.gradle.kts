@@ -31,7 +31,7 @@ android {
 
 dependencies {
     // 阿里云日志
-    api("com.aliyun.openservices:aliyun-log-android-sdk:2.5.25")
+    api("com.aliyun.openservices:aliyun-log-android-sdk:2.6.4")
 }
 
 // 将library上传到mavenCenter的脚本
