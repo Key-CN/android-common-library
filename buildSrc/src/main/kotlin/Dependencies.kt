@@ -1,17 +1,18 @@
 object versions {
-    const val compileSdk = 30
-    const val buildTools = "30.0.3"
+    const val compileSdk = 31
     const val minSdk = 16
-    const val targetSdk = 30
+    const val targetSdk = 31
 
-    const val kotlin = "1.5.21"
-    const val kotlin_coroutines = "1.5.0"
-    const val ktx = "1.6.0"
-    const val appcompat = "1.3.0"
-    const val annotation = "1.2.0"
-    const val lifecycle = "2.3.1"
+    const val kotlin = "1.6.10"
+    const val kotlin_coroutines = "1.6.0-native-mt"
+    const val ktx = "1.7.0"
+    const val appcompat = "1.4.1"
+    const val annotation = "1.3.0"
+    const val lifecycle = "2.4.0"
+    const val material = "1.5.0"
+    const val constraintlayout = "2.1.3"
 
-    const val okhttp3 = "4.9.1"
+    const val okhttp3 = "4.9.3"
 }
 
 object deps {
@@ -40,14 +41,14 @@ object deps {
     object androidx {
         const val appcompat = "androidx.appcompat:appcompat:${versions.appcompat}"
         const val annotation = "androidx.annotation:annotation:${versions.annotation}"
-        const val constraint_layout = "androidx.constraintlayout:constraintlayout:2.0.4"
+        const val constraint_layout = "androidx.constraintlayout:constraintlayout:${versions.constraintlayout}"
 
         // Lifecycles only (without ViewModel or LiveData)
         const val lifecycle_only = "androidx.lifecycle:lifecycle-runtime-ktx:${versions.lifecycle}"
     }
 
     object google {
-        const val material = "com.google.android.material:material:1.3.0"
+        const val material = "com.google.android.material:material:${versions.material}"
     }
 
     object square {
