@@ -4,15 +4,17 @@ plugins {
 }
 
 android {
-    compileSdk = versions.compileSdk
+    compileSdkVersion(versions.compileSdk)
     defaultConfig {
-        applicationId = "io.keyss.library.test"
-        minSdk = versions.minSdk
-        targetSdk = versions.targetSdk
-        versionCode = 1
-        versionName = "1.0.0"
-        testInstrumentationRunner = "android.support.test.runner.AndroidJUnitRunner"
+        applicationId("io.keyss.library.test")
+        minSdkVersion(versions.minSdk)
+        targetSdkVersion(versions.targetSdk)
+        versionCode(1)
+        versionName("1.0.0")
+        testInstrumentationRunner("android.support.test.runner.AndroidJUnitRunner")
     }
+
+    sourceSets.getByName("main").java.srcDirs("src/main/kotlin")
 
     buildFeatures {
         viewBinding = true
@@ -21,13 +23,17 @@ android {
 
     buildTypes {
         getByName("release") {
-            isMinifyEnabled = false
+            minifyEnabled(false)
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility(JavaVersion.VERSION_1_8)
+        targetCompatibility(JavaVersion.VERSION_1_8)
+    }
+
+    kotlinOptions {
+        jvmTarget = "1.8"
     }
 }
 
