@@ -296,6 +296,7 @@ object NetworkUtil {
                     ifconfig = it[0]
                 } else {
                     for (interfaceConfig in it) {
+                        // TODO isEthernetFirst优先则直接返回，不优先则先记录一下，没有Wi-Fi才返回eth
                         if (ifconfig == null || (isEthernetFirst && interfaceConfig.name.startsWith("eth"))) {
                             ifconfig = interfaceConfig
                         }

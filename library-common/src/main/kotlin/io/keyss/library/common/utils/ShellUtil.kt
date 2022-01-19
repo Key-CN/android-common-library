@@ -92,4 +92,15 @@ object ShellUtil {
         }
     }
 
+    /**
+     * 打开网络adb
+     */
+    fun openNetworkADB() {
+        val result = executeShell(
+            "setprop service.adb.tcp.port 5555",
+            "stop adbd",
+            "start adbd"
+        )
+        println("openNetworkADB resulte=${result}")
+    }
 }
