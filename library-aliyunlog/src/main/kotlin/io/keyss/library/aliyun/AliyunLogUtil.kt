@@ -58,6 +58,11 @@ object AliyunLogUtil {
      */
     private var mCacheSize = 256
 
+    /**
+     * 调用行函数所在深度，自行测试后设定
+     */
+    var defaultDepth = 7
+
     /** 上传日志的等级 */
     var uploadLevel = INFO
 
@@ -248,45 +253,46 @@ object AliyunLogUtil {
         }
     }
 
-    fun v(log: String, deeper: Int = 0) {
+    fun v(log: Any?, deeper: Int = 0) {
         printAndUploadLog(Log.VERBOSE, log, deeper)
     }
 
-    fun d(log: String, deeper: Int = 0) {
+    fun d(log: Any?, deeper: Int = 0) {
         printAndUploadLog(Log.DEBUG, log, deeper)
     }
 
-    fun i(log: String, deeper: Int = 0) {
+    fun i(log: Any?, deeper: Int = 0) {
         printAndUploadLog(Log.INFO, log, deeper)
     }
 
-    fun w(log: String, tr: Throwable? = null, deeper: Int = 0) {
+    fun w(log: Any?, tr: Throwable? = null, deeper: Int = 0) {
         printAndUploadLog(Log.WARN, log, deeper, tr)
     }
 
-    fun e(log: String, tr: Throwable? = null, deeper: Int = 0) {
+    fun e(log: Any?, tr: Throwable? = null, deeper: Int = 0) {
         printAndUploadLog(Log.ERROR, log, deeper, tr)
     }
 
     /** 只是打印，不上传 */
-    fun print(log: String, priority: Int = DEBUG, tr: Throwable? = null) {
+    fun print(log: Any, priority: Int = DEBUG, tr: Throwable? = null) {
         printLogcat(priority, formatLogMessage(log, 0, tr))
     }
 
-    private fun printAndUploadLog(priority: Int, log: String, deeper: Int, tr: Throwable? = null) {
-        val logString = formatLogMessage(log, deeper, tr)
+    private fun printAndUploadLog(priority: Int, log: Any?, deeper: Int, tr: Throwable? = null) {
+        val logStr = log.toString()
+        val logString = formatLogMessage(logStr, deeper, tr)
         // 输出
         if (isLocal || isPrintLogcat && priority >= printLevel) {
             printLogcat(priority, logString)
         }
         // 上传
         if (!isLocal && priority >= uploadLevel) {
-            pushLog(if (priority >= WARN) logString else log, getLevelString(priority))
+            pushLog(if (priority >= WARN) logString else logStr, getLevelString(priority))
         }
     }
 
     /** 美化log */
-    private fun formatLogMessage(log: String, deeper: Int, tr: Throwable?): String {
+    private fun formatLogMessage(log: Any?, deeper: Int, tr: Throwable?): String {
         val logBuilder = StringBuilder(getLogString(log, deeper))
         if (tr != null) {
             logBuilder.append('\n').append(Log.getStackTraceString(tr))
@@ -299,11 +305,11 @@ object AliyunLogUtil {
         Log.println(priority, mTopic, logString)
     }
 
-    private fun getLogString(msg: String, deeper: Int): String {
+    private fun getLogString(msg: Any?, deeper: Int): String {
         val thread = Thread.currentThread()
         // 要看在第几层调用, 有默认值的default算一层，lamda表达式无法准确找到位置
         // 类似于这种，栈中路径不明确，com.ishow.good_course_teacher.ui.home.login.LoginFragment$enterInit$1$invokeSuspend$$inlined$observe$1.onChanged(LiveData.kt:52)
-        val stackTraceElement: StackTraceElement = thread.stackTrace[7 + deeper]
+        val stackTraceElement: StackTraceElement = thread.stackTrace[defaultDepth + deeper]
         return "| Thread: ${thread.name} | Method: ${stackTraceElement.methodName}(${stackTraceElement.fileName}:${stackTraceElement.lineNumber}) |\n$msg"
     }
 
