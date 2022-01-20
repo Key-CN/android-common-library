@@ -3,7 +3,7 @@ plugins {
     kotlin("android")
 }
 
-val libVersion by extra("1.0.5")
+val libVersion by extra("1.0.6")
 
 android {
     compileSdkVersion(versions.compileSdk)

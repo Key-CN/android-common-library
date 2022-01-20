@@ -330,7 +330,9 @@ object AliyunLogUtil {
     private fun sendCacheLog() {
         var cacheLog: com.aliyun.sls.android.producer.Log?
         while (popCacheLog().also { cacheLog = it } != null) {
-            sendLog(cacheLog!!)
+            cacheLog?.let {
+                sendLog(it)
+            }
         }
     }
 
@@ -343,10 +345,17 @@ object AliyunLogUtil {
     @Synchronized
     private fun cacheLog(aliyunLog: com.aliyun.sls.android.producer.Log) {
         if (mLogCacheList.size > mCacheSize) {
-            mLogCacheList.removeAll {
-                it.content["Level"]?.let { level ->
-                    level != "WARN" && level != "ERROR"
-                } == true
+            // java.util.LinkedList$ListItr.next(LinkedList.java:893)
+            // LinkedList 890行 throw new NoSuchElementException(); 如果没有下一个会抛出异常，而上层不处理
+            // 而且存在边删边发的情况
+            try {
+                mLogCacheList.removeAll {
+                    it.content["Level"]?.let { level ->
+                        level != "WARN" && level != "ERROR"
+                    } == true
+                }
+            } catch (e: Exception) {
+                mLogCacheList.clear()
             }
             print("缓存日志已超过512条，清空已缓存的低等级日志，剩余${mLogCacheList.size}条", WARN)
             // 清除后还大，说明有问题，直接全清
