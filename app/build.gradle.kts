@@ -48,4 +48,5 @@ dependencies {
     implementation(deps.androidx.lifecycle_only)
     implementation(deps.kotlin.coroutines_android)
     implementation(project(":library-common"))
+    implementation(project(":library-aliyunlog"))
 }

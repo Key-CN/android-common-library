@@ -19,8 +19,11 @@ object AliyunLogUtil {
     const val WARN = Log.WARN
     const val ERROR = Log.ERROR
 
-    /** 杭州节点，公网入口 */
-    private const val ALIYUN_LOG_HZ_END_POINT: String = "cn-hangzhou.log.aliyuncs.com"
+    /**
+     * 杭州节点，公网入口
+     * 文档里给的只有域名没有带https://，没有忽略安全的app会直接报错
+     * */
+    private const val ALIYUN_LOG_HZ_END_POINT: String = "https://cn-hangzhou.log.aliyuncs.com"
 
     private var mTopic = "AliyunLogUtil"
     private val mFormatter: DateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS", Locale.SIMPLIFIED_CHINESE)
@@ -30,7 +33,7 @@ object AliyunLogUtil {
     private lateinit var mConfig: LogProducerConfig
     private lateinit var mClient: LogProducerClient
     private lateinit var mUpdateSTSBlock: () -> AliYunLogSTSBean?
-    private lateinit var mContentBlock: (com.aliyun.sls.android.producer.Log) -> Unit
+    private var mFixedDynamicContents: Map<String, () -> String?>? = null
     private var mConfigBlock: ((config: LogProducerConfig) -> Unit)? = null
     private val mLogCacheList = LinkedList<com.aliyun.sls.android.producer.Log>()
 
@@ -43,6 +46,11 @@ object AliyunLogUtil {
      * 仅本地，不上传
      */
     private var isLocal = true
+
+    /**
+     * 本地密钥
+     */
+    private var isLocalSts = false
 
     /** 是否立即发送，1立即发，0稍后在发，同时也代表token有效 */
     private var isSendNow = 0
@@ -75,28 +83,42 @@ object AliyunLogUtil {
     /**
      * 初始化，必要的设置放进入参
      * @param updateSTSBlock 在子线程内执行，接口不需要加suspend了
+     * @param isLocalSts 仅建议用于测试，放到线上不安全
+     * @param logTags 在起初配置的，固定值，无法动态更新
+     * @param fixedDynamicContentsBlock 固定却又动态的内容
      */
     fun init(
         context: Context,
         projectName: String,
         logStoreName: String,
         topic: String,
-        configBlock: (config: LogProducerConfig) -> Unit,
-        contentBlock: (com.aliyun.sls.android.producer.Log) -> Unit,
         updateSTSBlock: () -> AliYunLogSTSBean?,
+        isLocalSts: Boolean,
         isPrintLogcat: Boolean = true,
         uploadLevel: Int = INFO,
         printLevel: Int = VERBOSE,
         aliyunLogEndPoint: String = ALIYUN_LOG_HZ_END_POINT,
+        logTags: Map<String, String>? = null,
+        fixedDynamicContentsBlock: Map<String, () -> String?>? = null,
     ) {
+        // 只要初始化了，即时在线服务
         isLocal = false
         this.mTopic = topic
         this.uploadLevel = uploadLevel
         this.printLevel = printLevel
         this.isPrintLogcat = isPrintLogcat
-        this.mContentBlock = contentBlock
         this.mUpdateSTSBlock = updateSTSBlock
-        this.mConfigBlock = configBlock
+        this.isLocalSts = isLocalSts
+        if (!fixedDynamicContentsBlock.isNullOrEmpty()) {
+            this.mFixedDynamicContents = fixedDynamicContentsBlock
+        }
+        if (!logTags.isNullOrEmpty()) {
+            this.mConfigBlock = {
+                logTags.forEach { entry ->
+                    it.addTag(entry.key, entry.value)
+                }
+            }
+        }
         this.mConfig = createConfig(context, aliyunLogEndPoint, projectName, logStoreName)
         createClient(mConfig)
         updateToken()
@@ -106,16 +128,31 @@ object AliyunLogUtil {
         context: Context,
         aliyunLogEndPoint: String,
         projectName: String,
-        logStoreName: String,
-        accessKeyID: String = "", accessKeySecret: String = "", securityToken: String = ""
+        logStoreName: String
     ): LogProducerConfig {
+        var accessKeyID: String? = null
+        var accessKeySecret: String? = null
+        if (isLocalSts) {
+            isSendNow = 1
+            isTokenValid = true
+            mUpdateSTSBlock()?.let {
+                accessKeyID = it.accessKeyId
+                accessKeySecret = it.accessKeySecret
+            }
+        }
+
+        print(
+            "阿里云日志 createConfig: projectName = [${projectName}], logStoreName = [${logStoreName}], context = [${context}], aliyunLogEndPoint = [${aliyunLogEndPoint}], ",
+            WARN
+        )
+
         val config = LogProducerConfig(
             context,
             aliyunLogEndPoint,
             projectName,
             logStoreName,
-            "",
-            "",
+            accessKeyID,
+            accessKeySecret,
         )
         // 指定sts token 创建config，过期之前调用resetSecurityToken重置token
         // LogProducerConfig config = new LogProducerConfig(endpoint, project, logstore, accesskeyid, accesskeysecret, securityToken);
@@ -185,6 +222,10 @@ object AliyunLogUtil {
     }
 
     private fun updateToken() {
+        if (isLocalSts) {
+            print("本地sts, return")
+            return
+        }
         if (!isStsUpdating) {
             thread {
                 continuousUpdateToken()
@@ -235,6 +276,10 @@ object AliyunLogUtil {
     }
 
     private fun expirationTimer(sts: AliYunLogSTSBean) {
+        if (sts.expiration.isNullOrBlank()) {
+            // 永久
+            return
+        }
         thread {
             val nextTime = try {
                 // 提前5分钟，且至少大于1分钟，ParseException
@@ -265,11 +310,11 @@ object AliyunLogUtil {
         printAndUploadLog(Log.INFO, log, deeper)
     }
 
-    fun w(log: Any?, tr: Throwable? = null, deeper: Int = 0) {
+    fun w(log: Any?, tr: Throwable? = null, deeper: Int = -1) {
         printAndUploadLog(Log.WARN, log, deeper, tr)
     }
 
-    fun e(log: Any?, tr: Throwable? = null, deeper: Int = 0) {
+    fun e(log: Any?, tr: Throwable? = null, deeper: Int = -1) {
         printAndUploadLog(Log.ERROR, log, deeper, tr)
     }
 
@@ -319,8 +364,11 @@ object AliyunLogUtil {
         aliyunLog.putContent("Message", msg)
         aliyunLog.putContent("LocalTime", mFormatter.format(Date()))
         aliyunLog.putContent("Level", level)
-        if (::mContentBlock.isInitialized) {
-            mContentBlock(aliyunLog)
+        mFixedDynamicContents?.forEach { entry ->
+            // 排除获取出来为null的值
+            entry.value.invoke()?.let {
+                aliyunLog.putContent(entry.key, it)
+            }
         }
         if (::mClient.isInitialized && isTokenValid) {
             sendLog(aliyunLog)
