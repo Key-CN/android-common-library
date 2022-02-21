@@ -3,7 +3,7 @@ plugins {
     kotlin("android")
 }
 
-val libVersion by extra("1.0.11")
+val libVersion by extra("1.0.12")
 
 android {
     compileSdkVersion(versions.compileSdk)
@@ -51,6 +51,8 @@ dependencies {
     implementation(deps.androidx.annotation)
     // kotlin的反射库
     implementation(kotlin("reflect"))
+    // 转换工具类，实际还是依赖项目中使用的Gson
+    compileOnly("com.google.code.gson:gson:2.9.0")
 }
 
 // 将library上传到mavenCenter的脚本
