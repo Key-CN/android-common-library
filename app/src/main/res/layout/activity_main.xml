@@ -13,6 +13,13 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <io.keyss.library.common.widget.Camera1Preview
+        android:id="@+id/c1pv_small_main_activity"
+        android:layout_width="240dp"
+        android:layout_height="360dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <androidx.appcompat.widget.AppCompatTextView
         android:textSize="20sp"
         android:textColor="#ff0000"

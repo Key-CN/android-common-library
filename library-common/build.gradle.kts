@@ -3,7 +3,7 @@ plugins {
     kotlin("android")
 }
 
-val libVersion by extra("1.0.7")
+val libVersion by extra("1.0.8")
 
 android {
     compileSdkVersion(versions.compileSdk)
@@ -45,6 +45,8 @@ dependencies {
     compileOnly(deps.kotlin.coroutines_android)
     compileOnly(deps.androidx.lifecycle_only)
     compileOnly(deps.square.okhttp3)
+    // 只是为了image数据转换的工具类
+    compileOnly("androidx.camera:camera-core:1.1.0-beta01")
     // viewBinding需要
     implementation(deps.androidx.annotation)
     // kotlin的反射库

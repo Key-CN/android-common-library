@@ -46,8 +46,10 @@ class MainActivity : BaseReflectBindingActivity<ActivityMainBinding>() {
         }
 
         requestPermissions(arrayOf(Manifest.permission.CAMERA),909)
-        mBinding.c1pvMainActivity.extraRotation = 180
+        //mBinding.c1pvMainActivity.extraRotation = 180
         mBinding.c1pvMainActivity.setLifecycleOwner(this)
+        mBinding.c1pvSmallMainActivity.cameraId=1
+        mBinding.c1pvSmallMainActivity.setLifecycleOwner(this)
 
         /*Looper.myQueue().addIdleHandler {
 

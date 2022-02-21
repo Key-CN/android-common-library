@@ -5,7 +5,6 @@ import android.content.res.Configuration
 import android.graphics.ImageFormat
 import android.graphics.SurfaceTexture
 import android.hardware.Camera
-import android.hardware.Camera.CameraInfo
 import android.os.SystemClock
 import android.util.AttributeSet
 import android.util.Log
@@ -46,8 +45,8 @@ class Camera1Preview : TextureView, LifecycleObserver {
     private var mImageDataTime: Long = 0
 
     // 控件的宽高
-    private var viewHeight: Int = 0
-    private var viewWidth: Int = 0
+    private var mViewHeight: Int = 0
+    private var mViewWidth: Int = 0
 
     // 摄像头参数
     // 摄像头默认方向，大概率是90
@@ -64,7 +63,8 @@ class Camera1Preview : TextureView, LifecycleObserver {
 
     // 手机的话，前置一般需要镜像一下
     var isMirror = false
-    private var previewFormat = ImageFormat.NV21
+    // 回流的数据格式
+    var previewFormat = ImageFormat.NV21
 
     // real预览尺寸
     private var mPreviewWidth: Int = 0
@@ -79,9 +79,9 @@ class Camera1Preview : TextureView, LifecycleObserver {
      * Camera.CameraInfo.CAMERA_FACING_BACK = 0
      * Camera.CameraInfo.CAMERA_FACING_FRONT = 1
      */
-    var mCameraId = 0
+    var cameraId = 0
 
-    var mCamera: Camera? = null
+    private var mCamera: Camera? = null
     var onPreviewFrameListener: ((nv21: ByteArray, camera: Camera) -> Unit)? = null
 
     constructor(context: Context) : super(context)
@@ -103,8 +103,8 @@ class Camera1Preview : TextureView, LifecycleObserver {
 
             override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {
                 Log.d(TAG, "onSurfaceTextureSizeChanged() called with: surface = $surface, width = $width, height = $height")
-                viewWidth = width
-                viewHeight = height
+                mViewWidth = width
+                mViewHeight = height
             }
 
             override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
@@ -119,7 +119,7 @@ class Camera1Preview : TextureView, LifecycleObserver {
     }
 
     @Throws
-    fun startPreview(cameraID: Int = 0) {
+    fun startPreview(cameraID: Int = cameraId) {
         if (numberOfCameras < 1) {
             throw RuntimeException("没有检测到摄像头")
         }
@@ -128,7 +128,7 @@ class Camera1Preview : TextureView, LifecycleObserver {
         }
 
         if (isPreviewing) {
-            if (mCameraId == cameraID) {
+            if (cameraId == cameraID) {
                 Log.w(TAG, "已开启，不重复开启")
                 return
             } else {
@@ -136,9 +136,9 @@ class Camera1Preview : TextureView, LifecycleObserver {
             }
         }
         isPreviewing = true
-        mCameraId = cameraID
+        cameraId = cameraID
         val cameraInfo = Camera.CameraInfo()
-        Camera.getCameraInfo(mCameraId, cameraInfo)
+        Camera.getCameraInfo(cameraId, cameraInfo)
         // 摄像头的默认角度
         mRotation = cameraInfo.orientation
         if (isViewDrawFinished) {
@@ -165,14 +165,14 @@ class Camera1Preview : TextureView, LifecycleObserver {
      * 权限未请求！
      */
     private fun startPreviewCore() {
-        viewHeight = measuredHeight
-        viewWidth = measuredWidth
+        mViewHeight = measuredHeight
+        mViewWidth = measuredWidth
 
         Log.i(
             TAG,
-            "startPreviewCore, 控件宽高: viewHeight=${viewHeight}, viewWidth=${viewWidth}, CameraRotation=${mRotation}, DisplayRotation=${mDisplayRotation}"
+            "startPreviewCore, 控件宽高: viewHeight=${mViewHeight}, viewWidth=${mViewWidth}, CameraRotation=${mRotation}, DisplayRotation=${mDisplayRotation}"
         )
-        mCamera = Camera.open(mCameraId).also {
+        mCamera = Camera.open(cameraId).also {
             it.setPreviewTexture(surfaceTexture)
 
             val parameters = it.parameters
@@ -210,8 +210,8 @@ class Camera1Preview : TextureView, LifecycleObserver {
                 mPreviewWidth = expectedPreviewWidth as Int
                 mPreviewHeight = expectedPreviewHeight as Int
             } else {
-                mPreviewWidth = viewWidth
-                mPreviewHeight = viewHeight
+                mPreviewWidth = mViewWidth
+                mPreviewHeight = mViewHeight
             }
             // 正确时：横向：宽大于高，纵向：宽小于高
             if ((isLandscape && mPreviewWidth < mPreviewHeight) || (mPreviewWidth > mPreviewHeight)) {
