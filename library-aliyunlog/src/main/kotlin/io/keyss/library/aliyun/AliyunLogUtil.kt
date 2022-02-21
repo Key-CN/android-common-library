@@ -22,8 +22,9 @@ object AliyunLogUtil {
     /**
      * 杭州节点，公网入口
      * 文档里给的只有域名没有带https://，没有忽略安全的app会直接报错
+     * "https://cn-hangzhou.log.aliyuncs.com"
      * */
-    private const val ALIYUN_LOG_HZ_END_POINT: String = "https://cn-hangzhou.log.aliyuncs.com"
+    private const val ALIYUN_LOG_HZ_END_POINT: String = "cn-hangzhou.log.aliyuncs.com"
 
     private var mTopic = "AliyunLogUtil"
     private val mFormatter: DateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS", Locale.SIMPLIFIED_CHINESE)

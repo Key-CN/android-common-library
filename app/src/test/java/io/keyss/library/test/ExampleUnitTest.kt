@@ -31,4 +31,27 @@ class ExampleUnitTest {
         println()
 
     }
+
+    data class P(val id: Int = 0) {
+
+    }
+
+    @Test
+    fun dataTest() {
+        val a = arrayOf(P())
+        val b = a.clone()
+        println("${a === b}")
+        println("${a[0] === b[0]}")
+        println("${a.contentEquals(b)}")
+        //a.deepCopyData()
+        println("isData=${a::class.isData}")
+        println("isCompanion=${a::class.isCompanion}")
+        println("isAbstract=${a::class.isAbstract}")
+        println("isFinal=${a::class.isFinal}")
+        println("isInner=${a::class.isInner}")
+        println("isSealed=${a::class.isSealed}")
+        println("isValue=${a::class.isValue}")
+        println("isOpen=${a::class.isOpen}")
+        println("isFun=${a::class.isFun}")
+    }
 }

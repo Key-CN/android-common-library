@@ -403,32 +403,6 @@ object NetworkUtil {
     }
 
     @JvmStatic
-    fun isGpsOpen(context: Context): Boolean {
-        val locationManager = ContextCompat.getSystemService(context, LocationManager::class.java)
-        return locationManager?.let {
-            // 通过GPS卫星定位，定位级别可以精确到街（通过24颗卫星定位，在室外和空旷的地方定位准确、速度快）
-            val gps = it.isProviderEnabled(LocationManager.GPS_PROVIDER)
-            // 通过WLAN或移动网络(3G/2G)确定的位置（也称作AGPS，辅助GPS定位。主要用于在室内或遮盖物（建筑群或茂密的深林等）密集的地方定位）
-            val agps = it.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
-            println("NetworkUtil isGpsOpen gps=${gps} agps=${agps}")
-            gps || agps
-        } ?: kotlin.run {
-            println("NetworkUtil isGpsOpen LocationManager 获取失败")
-            false
-        }
-    }
-
-    /**
-     * 打开GPS，请在主线程执行
-     * 不try，加个toast非主线程直接蹦，方便看，必须开发期解决
-     */
-    @JvmStatic
-    fun openGps(context: Context) {
-        Toast.makeText(context, "请手动打开GPS开关", Toast.LENGTH_LONG).show()
-        context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
-    }
-
-    @JvmStatic
     fun intToIPv4(ipInt: Int): String {
         val sb = StringBuilder()
         sb.append(ipInt and 0xFF).append(".")

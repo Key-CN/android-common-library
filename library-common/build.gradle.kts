@@ -3,7 +3,7 @@ plugins {
     kotlin("android")
 }
 
-val libVersion by extra("1.0.6")
+val libVersion by extra("1.0.7")
 
 android {
     compileSdkVersion(versions.compileSdk)
@@ -47,6 +47,8 @@ dependencies {
     compileOnly(deps.square.okhttp3)
     // viewBinding需要
     implementation(deps.androidx.annotation)
+    // kotlin的反射库
+    implementation(kotlin("reflect"))
 }
 
 // 将library上传到mavenCenter的脚本
