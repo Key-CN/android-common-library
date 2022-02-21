@@ -1,6 +1,7 @@
 package io.keyss.library.test
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.os.Bundle
 import android.os.Looper
@@ -37,7 +38,6 @@ class MainActivity : BaseReflectBindingActivity<ActivityMainBinding>() {
             sb.appendLine(withContext(Dispatchers.IO) {
                 NetworkUtil.getWifiInfo(this@MainActivity)
             })*/
-            sb.appendLine(mBinding.c1pvMainActivity.getInfo())
 
             sb.appendLine()
             mBinding.tvMainActivity.text = sb.toString()
@@ -45,16 +45,28 @@ class MainActivity : BaseReflectBindingActivity<ActivityMainBinding>() {
 
         }
 
-        requestPermissions(arrayOf(Manifest.permission.CAMERA),909)
-        //mBinding.c1pvMainActivity.extraRotation = 180
-        mBinding.c1pvMainActivity.setLifecycleOwner(this)
-        mBinding.c1pvSmallMainActivity.cameraId=1
-        mBinding.c1pvSmallMainActivity.setLifecycleOwner(this)
+        requestPermissions(arrayOf(Manifest.permission.CAMERA), 909)
+        var beginTransaction = supportFragmentManager.beginTransaction()
+        val cameraFragment = CameraFragment()
+        beginTransaction.add(R.id.fragment_main_activity, cameraFragment)
+        beginTransaction.commitAllowingStateLoss()
 
         /*Looper.myQueue().addIdleHandler {
 
             false
         }*/
+        val emptyFragment = EmptyFragment()
+        lifecycleScope.launchWhenResumed {
+            delay(3000)
+            beginTransaction = supportFragmentManager.beginTransaction()
+            beginTransaction.replace(R.id.fragment_main_activity, emptyFragment)
+            beginTransaction.commitAllowingStateLoss()
+
+            delay(2000)
+            beginTransaction = supportFragmentManager.beginTransaction()
+            beginTransaction.replace(R.id.fragment_main_activity, cameraFragment)
+            beginTransaction.commitAllowingStateLoss()
+        }
     }
 
     private fun testTree() {

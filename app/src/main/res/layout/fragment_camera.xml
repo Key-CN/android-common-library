@@ -4,12 +4,23 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".MainActivity">
+    tools:context=".CameraFragment">
 
-    <androidx.fragment.app.FragmentContainerView
-        android:id="@+id/fragment_main_activity"
+    <io.keyss.library.common.widget.Camera1Preview
+        android:id="@+id/c1pv_main_activity"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        app:cameraID="0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <io.keyss.library.common.widget.Camera1Preview
+        android:id="@+id/c1pv_small_main_activity"
+        android:layout_width="240dp"
+        android:layout_height="360dp"
+        app:cameraID="1"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <androidx.appcompat.widget.AppCompatTextView
         android:id="@+id/tv_main_activity"
