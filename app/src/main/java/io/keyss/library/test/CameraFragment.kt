@@ -20,8 +20,22 @@ class CameraFragment : BaseReflectBindingFragment<FragmentCameraBinding>() {
 
     override fun initViewEveryTimeOnViewCreated() {
         Log.i("CameraFragment initViewEveryTimeOnViewCreated: ")
-        mBinding.c1pvMainActivity.setLifecycleOwner(viewLifecycleOwner)
-        mBinding.c1pvSmallMainActivity.setLifecycleOwner(viewLifecycleOwner)
+        mBinding.c1pvMainActivity.apply {
+            setLifecycleOwner(viewLifecycleOwner)
+            setPreviewSize(640, 480)
+            onPreviewStartFinish = {
+                Log.i("RGB摄像头, 宽=${it[0]}, 高=${it[1]}")
+            }
+        }
+        mBinding.c1pvSmallMainActivity.apply {
+            setLifecycleOwner(viewLifecycleOwner)
+            setPreviewSize(640, 480)
+            onPreviewStartFinish = {
+                Log.i("NIR摄像头, 宽=${it[0]}, 高=${it[1]}")
+            }
+        }
+
+
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

@@ -214,16 +214,16 @@ class Camera1Preview : TextureView, LifecycleObserver {
 
             val parameters = it.parameters
             // 先拿默认预览尺寸计算下横竖
+            isLandscape = parameters.previewSize.let { size ->
+                size.width > size.height
+            }
             log(
                 "startPreviewCore, 控件宽高: viewWidth=${mViewWidth}, viewHeight=${mViewHeight}, " +
-                        "相机默认角度=${mRotation}, 视图角度=${mDisplayRotation}, " +
+                        "相机默认角度=${mRotation}, 视图角度=${mDisplayRotation}, 横向=${isLandscape}, " +
                         "默认的尺寸: 宽=${parameters.previewSize.width}, 高=${parameters.previewSize.height}, " +
                         "期望得到的尺寸: 宽=${expectedPreviewWidth}, 高=${expectedPreviewHeight}"
             )
 
-            isLandscape = parameters.previewSize.let { size ->
-                size.width > size.height
-            }
 
             // 理论上相机角度和屏幕应该是一致的，纵向屏幕,理论上摄像头和屏幕理论上应该成90度夹角
             // 相机角度默认等于屏幕角度 + 相机默认角度
@@ -254,7 +254,7 @@ class Camera1Preview : TextureView, LifecycleObserver {
                 mPreviewHeight = mViewHeight
             }
             // 正确时：横向：宽大于高，纵向：宽小于高
-            if ((isLandscape && mPreviewWidth < mPreviewHeight) || (mPreviewWidth > mPreviewHeight)) {
+            if ((isLandscape && mPreviewWidth < mPreviewHeight) || (!isLandscape && mPreviewWidth > mPreviewHeight)) {
                 swapWidthHeight()
             }
 
@@ -262,6 +262,11 @@ class Camera1Preview : TextureView, LifecycleObserver {
             parameters.setPreviewSize(bestSupportedSize.width, bestSupportedSize.height)
             mPreviewWidth = parameters.previewSize.width
             mPreviewHeight = parameters.previewSize.height
+            log(
+                "计算得出的最佳预览尺寸, w=${bestSupportedSize.width}, h=${bestSupportedSize.width}, " +
+                        "mPreviewWidth=${mPreviewWidth}, mPreviewHeight=$mPreviewHeight, " +
+                        "parametersW=${parameters.previewSize.width}, parametersH=${parameters.previewSize.height}"
+            )
             log("支持的对焦模式有: ${parameters.supportedFocusModes}")
             if (parameters.supportedFocusModes.contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO)) {
                 // 优先使用持续对焦
@@ -313,9 +318,11 @@ class Camera1Preview : TextureView, LifecycleObserver {
      * 交换宽高
      */
     private fun swapWidthHeight() {
+        log("交换宽高前: mPreviewWidth=${mPreviewWidth}, mPreviewHeight=${mPreviewHeight}")
         mPreviewWidth = mPreviewWidth xor mPreviewHeight
         mPreviewHeight = mPreviewWidth xor mPreviewHeight
         mPreviewWidth = mPreviewWidth xor mPreviewHeight
+        log("交换宽高后: mPreviewWidth=${mPreviewWidth}, mPreviewHeight=${mPreviewHeight}")
     }
 
     fun stopPreview() {
@@ -403,7 +410,8 @@ class Camera1Preview : TextureView, LifecycleObserver {
      * @return 0:宽, 1:高
      */
     fun getRealPreviewSize(): Array<Int> {
-        return arrayOf(mPreviewWidth, mPreviewHeight)
+        val previewSize = mCamera?.parameters?.previewSize
+        return arrayOf(previewSize?.width ?: mPreviewWidth, previewSize?.height ?: mPreviewHeight)
     }
 
     private fun getBestSupportedSize(sizes: List<Camera.Size>?, width: Int, height: Int): Camera.Size {

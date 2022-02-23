@@ -56,7 +56,7 @@ class MainActivity : BaseReflectBindingActivity<ActivityMainBinding>() {
 
             false
         }*/
-        val emptyFragment = EmptyFragment()
+        /*val emptyFragment = EmptyFragment()
         lifecycleScope.launchWhenResumed {
             delay(3000)
             beginTransaction = supportFragmentManager.beginTransaction()
@@ -67,7 +67,7 @@ class MainActivity : BaseReflectBindingActivity<ActivityMainBinding>() {
             beginTransaction = supportFragmentManager.beginTransaction()
             beginTransaction.replace(R.id.fragment_main_activity, cameraFragment)
             beginTransaction.commitAllowingStateLoss()
-        }
+        }*/
     }
 
     private fun testTree() {
