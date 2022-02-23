@@ -3,6 +3,7 @@ package io.keyss.library.test
 import android.Manifest
 import android.content.Intent
 import android.content.pm.ActivityInfo
+import android.hardware.Camera
 import android.os.Bundle
 import android.os.Looper
 import android.view.ViewTreeObserver
@@ -38,7 +39,7 @@ class MainActivity : BaseReflectBindingActivity<ActivityMainBinding>() {
             sb.appendLine(withContext(Dispatchers.IO) {
                 NetworkUtil.getWifiInfo(this@MainActivity)
             })*/
-
+            sb.appendLine("摄像头数量：${Camera.getNumberOfCameras()}")
             sb.appendLine()
             mBinding.tvMainActivity.text = sb.toString()
 

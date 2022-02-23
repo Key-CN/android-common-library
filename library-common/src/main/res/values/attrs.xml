@@ -3,5 +3,7 @@
     <declare-styleable name="Camera1Preview">
         <attr name="cameraID" format="integer" />
         <attr name="defaultStart" format="boolean" />
+        <attr name="previewWidth" format="integer" />
+        <attr name="previewHeight" format="integer" />
     </declare-styleable>
 </resources>

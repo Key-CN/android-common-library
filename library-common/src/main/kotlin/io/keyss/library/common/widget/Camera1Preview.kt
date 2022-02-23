@@ -25,6 +25,7 @@ import kotlin.math.abs
  * Description:
  */
 class Camera1Preview : TextureView, LifecycleObserver {
+    var isDebug = BuildConfig.DEBUG
 
     /**
      * 默认的摄像头ID，默认后置0
@@ -41,6 +42,8 @@ class Camera1Preview : TextureView, LifecycleObserver {
      * 是否默认加载完就启动
      */
     var isDefaultStart = true
+
+    var isUseDataBuffer = true
 
     // 空间是否已渲染完成
     private var isViewDrawFinished = false
@@ -88,11 +91,16 @@ class Camera1Preview : TextureView, LifecycleObserver {
     private var mPreviewHeight: Int = 0
 
     // 用户设定的期望值
-    var expectedPreviewWidth: Int? = null
-    var expectedPreviewHeight: Int? = null
+    var expectedPreviewWidth: Int = 0
+    var expectedPreviewHeight: Int = 0
 
     private var mCamera: Camera? = null
+
+    // 预览帧监听
     var onPreviewFrameListener: ((nv21: ByteArray, camera: Camera) -> Unit)? = null
+
+    // 预览启动完成
+    var onPreviewStartFinish: ((wh: Array<Int>) -> Unit)? = null
 
     constructor(context: Context) : super(context)
     constructor(context: Context, attrs: AttributeSet?) : this(context, attrs, 0)
@@ -106,15 +114,16 @@ class Camera1Preview : TextureView, LifecycleObserver {
         val attributes = context.obtainStyledAttributes(attrs, R.styleable.Camera1Preview)
         cameraId = attributes.getInt(R.styleable.Camera1Preview_cameraID, 0)
         isDefaultStart = attributes.getBoolean(R.styleable.Camera1Preview_defaultStart, true)
-        Log.d(TAG, "constructor(4参) called with: attrs = ${attrs}, cameraId = $cameraId, isDefaultStart=$isDefaultStart")
+        expectedPreviewWidth = attributes.getInt(R.styleable.Camera1Preview_previewWidth, 0)
+        expectedPreviewHeight = attributes.getInt(R.styleable.Camera1Preview_previewHeight, 0)
+        log("constructor(4参) called with: attrs = ${attrs}, cameraId = $cameraId, isDefaultStart=$isDefaultStart")
         attributes.recycle()
     }
-
 
     init {
         surfaceTextureListener = object : SurfaceTextureListener {
             override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
-                Log.d(TAG, "onSurfaceTextureAvailable() called with: surface = $surface, width = $width, height = $height")
+                log("onSurfaceTextureAvailable() called with: surface = $surface, width = $width, height = $height")
                 isViewDrawFinished = true
                 if (isWaitingToOpen) {
                     waitToOpen()
@@ -122,14 +131,14 @@ class Camera1Preview : TextureView, LifecycleObserver {
             }
 
             override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {
-                Log.d(TAG, "onSurfaceTextureSizeChanged() called with: surface = $surface, width = $width, height = $height")
+                log("onSurfaceTextureSizeChanged() called with: surface = $surface, width = $width, height = $height")
                 mViewWidth = width
                 mViewHeight = height
             }
 
             override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
                 // fragment replace会被Destroy掉，适配navigation需要做一些处理，直接replace会走onDestroy，navigation的不会走
-                Log.d(TAG, "onSurfaceTextureDestroyed() called with: surface = $surface")
+                log("onSurfaceTextureDestroyed() called with: surface = $surface")
                 isViewDrawFinished = false
                 return true
             }
@@ -167,7 +176,7 @@ class Camera1Preview : TextureView, LifecycleObserver {
     }
 
     private fun waitToOpen() {
-        Log.d(TAG, "waitToOpen() called: isViewDrawFinished=$isViewDrawFinished, isWaitingToOpen=$isWaitingToOpen")
+        log("waitToOpen() called: isViewDrawFinished=$isViewDrawFinished, isWaitingToOpen=$isWaitingToOpen")
         if (isViewDrawFinished) {
             startPreviewCore()
         } else {
@@ -181,7 +190,7 @@ class Camera1Preview : TextureView, LifecycleObserver {
                         post {
                             startPreviewCore()
                         }
-                        Log.d(TAG, "startPreview(${cameraId}) 等待了${System.currentTimeMillis() - startTimeMillis}ms, 渲染完成后打开摄像头")
+                        log("startPreview(${cameraId}) 等待了${System.currentTimeMillis() - startTimeMillis}ms, 渲染完成后打开摄像头")
                         return@thread
                     }
                 }
@@ -205,11 +214,11 @@ class Camera1Preview : TextureView, LifecycleObserver {
 
             val parameters = it.parameters
             // 先拿默认预览尺寸计算下横竖
-            Log.d(
-                TAG, "startPreviewCore, 控件宽高: viewHeight=${mViewHeight}, viewWidth=${mViewWidth}, " +
+            log(
+                "startPreviewCore, 控件宽高: viewWidth=${mViewWidth}, viewHeight=${mViewHeight}, " +
                         "相机默认角度=${mRotation}, 视图角度=${mDisplayRotation}, " +
-                        "默认的尺寸: 高=${parameters.previewSize.height}, 宽=${parameters.previewSize.width}, " +
-                        "期望得到的尺寸:  高=${expectedPreviewHeight}, 宽=${expectedPreviewWidth}"
+                        "默认的尺寸: 宽=${parameters.previewSize.width}, 高=${parameters.previewSize.height}, " +
+                        "期望得到的尺寸: 宽=${expectedPreviewWidth}, 高=${expectedPreviewHeight}"
             )
 
             isLandscape = parameters.previewSize.let { size ->
@@ -229,14 +238,17 @@ class Camera1Preview : TextureView, LifecycleObserver {
             }
             rotation = correctRotation(rotation + extraRotation)
             // 工控机很多装配不严谨，摄像头是装反的情况，就需要手动指定extraRotation参数，甚至可能出现一批机器，一部分0，一部分180的安装方向
-            Log.i(TAG, "最终方向：rotation=$rotation, isPortrait=$isPortrait")
+            log("最终方向：rotation=$rotation, isPortrait=$isPortrait")
             it.setDisplayOrientation(rotation)
+
+
+            log("默认的预览格式=${parameters.previewFormat}, 需设定的预览格式=${previewFormat}, 所有支持的预览格式=${parameters.supportedPreviewFormats}")
             parameters.previewFormat = previewFormat
 
             // 设置预览尺寸，对比期望的预览尺寸得出正确的预览尺寸，todo 再用屏幕方向做一个旋转
-            if (null != expectedPreviewHeight && null != expectedPreviewWidth) {
-                mPreviewWidth = expectedPreviewWidth as Int
-                mPreviewHeight = expectedPreviewHeight as Int
+            if (expectedPreviewHeight > 0 && expectedPreviewWidth > 0) {
+                mPreviewWidth = expectedPreviewWidth
+                mPreviewHeight = expectedPreviewHeight
             } else {
                 mPreviewWidth = mViewWidth
                 mPreviewHeight = mViewHeight
@@ -247,46 +259,53 @@ class Camera1Preview : TextureView, LifecycleObserver {
             }
 
             val bestSupportedSize = getBestSupportedSize(parameters.supportedPreviewSizes, mPreviewWidth, mPreviewHeight)
-            mPreviewWidth = bestSupportedSize.width
-            mPreviewHeight = bestSupportedSize.height
-            parameters.setPreviewSize(mPreviewWidth, mPreviewHeight)
-            Log.d(TAG, "支持的对焦模式有: ${parameters.supportedFocusModes}")
+            parameters.setPreviewSize(bestSupportedSize.width, bestSupportedSize.height)
+            mPreviewWidth = parameters.previewSize.width
+            mPreviewHeight = parameters.previewSize.height
+            log("支持的对焦模式有: ${parameters.supportedFocusModes}")
             if (parameters.supportedFocusModes.contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO)) {
                 // 优先使用持续对焦
                 parameters.focusMode = Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO
             }
             it.parameters = parameters
 
-            // 缓冲预览
-            val size: Int = mPreviewWidth * mPreviewHeight * ImageFormat.getBitsPerPixel(previewFormat) / 8
-            mImageData = ByteArray(size)
-            it.addCallbackBuffer(mImageData)
-            it.setPreviewCallbackWithBuffer { nv21: ByteArray, camera: Camera ->
-                camera.addCallbackBuffer(nv21)
-                // 使用时深拷贝一份
-                onPreviewFrameListener?.invoke(nv21, camera)
+            // 设置预览帧回调
+            if (isUseDataBuffer) {
+                // 缓冲预览
+                mImageData = ByteArray(mPreviewWidth * mPreviewHeight * ImageFormat.getBitsPerPixel(previewFormat) / 8)
+                it.addCallbackBuffer(mImageData)
+                it.setPreviewCallbackWithBuffer { data, camera ->
+                    camera.addCallbackBuffer(data)
+                    // 使用时深拷贝一份
+                    onPreviewFrameListener?.invoke(data, camera)
+                }
+            } else {
+                it.setPreviewCallback { data, camera ->
+                    mImageData = data
+                    onPreviewFrameListener?.invoke(data, camera)
+                }
             }
+
             if (isMirror) {
                 scaleY = -1f
             }
             // debug模式下输出一下数据
-            if (BuildConfig.DEBUG) {
+            if (isDebug) {
                 val fpsRange = IntArray(2)
                 it.parameters.getPreviewFpsRange(fpsRange)
-                Log.i(
-                    TAG,
+                log(
                     //"预览Size: ${it.parameters.get("preview-size")}, " +
                     "Real预览Size: 宽=${it.parameters.previewSize.width}, 高=${it.parameters.previewSize.height}, " +
                             "帧率: ${it.parameters.previewFrameRate}, " +
                             "Fps: ${fpsRange.contentToString()}, " +
                             "横向: $isLandscape, " +
                             "数据格式: ${it.parameters.previewFormat}, " +
-                            "对焦模式: ${it.parameters.focusMode}, " +
-                            "缓冲池尺寸: $size"
+                            "对焦模式: ${it.parameters.focusMode}"
                 )
             }
             // onCreate中直接启动会在未渲染出Texture导致无法预览
             it.startPreview()
+            onPreviewStartFinish?.invoke(getRealPreviewSize())
         }
     }
 
@@ -300,7 +319,7 @@ class Camera1Preview : TextureView, LifecycleObserver {
     }
 
     fun stopPreview() {
-        Log.i(TAG, "stopPreview")
+        log("stopPreview")
         mCamera?.let {
             it.stopPreview()
             it.release()
@@ -311,10 +330,7 @@ class Camera1Preview : TextureView, LifecycleObserver {
 
     @OnLifecycleEvent(Lifecycle.Event.ON_START)
     fun onStart() {
-        Log.d(
-            TAG,
-            "onStart() called: isViewDrawFinished=$isViewDrawFinished, isDefaultStart=$isDefaultStart, mLastPreviewStatus=$mLastPreviewStatus"
-        )
+        log("onStart() called: isViewDrawFinished=$isViewDrawFinished, isDefaultStart=$isDefaultStart, mLastPreviewStatus=$mLastPreviewStatus")
         // 优先判断上一次的状态
         if (mLastPreviewStatus) {
             resumePreview()
@@ -330,7 +346,7 @@ class Camera1Preview : TextureView, LifecycleObserver {
 
     @OnLifecycleEvent(Lifecycle.Event.ON_STOP)
     fun onStop() {
-        Log.d(TAG, "onStop() called")
+        log("onStop() called")
         mLastPreviewStatus = isPreviewing
         if (isPreviewing) {
             pausePreview()
@@ -339,13 +355,13 @@ class Camera1Preview : TextureView, LifecycleObserver {
 
     @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
     fun onDestroy() {
-        Log.d(TAG, "onDestroy() called")
+        log("onDestroy() called")
         stopPreview()
     }
 
 
     fun pausePreview(): Unit {
-        Log.d(TAG, "pausePreview() called")
+        log("pausePreview() called")
         isPreviewing = false
         isWaitingToOpen = false
         mCamera?.stopPreview()
@@ -353,7 +369,7 @@ class Camera1Preview : TextureView, LifecycleObserver {
 
 
     fun resumePreview(): Unit {
-        Log.d(TAG, "resumePreview() called")
+        log("resumePreview() called")
         waitToOpen()
     }
 
@@ -384,9 +400,10 @@ class Camera1Preview : TextureView, LifecycleObserver {
 
     /**
      * 获取真正的预览尺寸，在打开摄像头后才真正Real
+     * @return 0:宽, 1:高
      */
     fun getRealPreviewSize(): Array<Int> {
-        return arrayOf(mPreviewHeight, mPreviewWidth)
+        return arrayOf(mPreviewWidth, mPreviewHeight)
     }
 
     private fun getBestSupportedSize(sizes: List<Camera.Size>?, width: Int, height: Int): Camera.Size {
@@ -447,5 +464,11 @@ class Camera1Preview : TextureView, LifecycleObserver {
 
     fun getInfo(): String {
         return "总共有${numberOfCameras}个摄像头"
+    }
+
+    fun log(logMsg: Any?) {
+        if (isDebug) {
+            Log.d(TAG, logMsg.toString())
+        }
     }
 }

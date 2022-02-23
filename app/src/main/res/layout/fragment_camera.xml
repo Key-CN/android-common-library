@@ -22,13 +22,4 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <androidx.appcompat.widget.AppCompatTextView
-        android:id="@+id/tv_main_activity"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:gravity="center"
-        android:text="Hello World!"
-        android:textColor="#ff0000"
-        android:textSize="20sp" />
-
 </androidx.constraintlayout.widget.ConstraintLayout>
