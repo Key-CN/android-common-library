@@ -1,13 +1,11 @@
 package io.keyss.library.test
 
-import android.Manifest
-import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.hardware.Camera
 import android.os.Bundle
-import android.os.Looper
 import android.view.ViewTreeObserver
 import androidx.lifecycle.lifecycleScope
+import io.keyss.id.DeviceIDUtil
 import io.keyss.library.aliyun.Log
 import io.keyss.library.common.base.BaseReflectBindingActivity
 import io.keyss.library.common.utils.AverageUtil
@@ -26,6 +24,7 @@ class MainActivity : BaseReflectBindingActivity<ActivityMainBinding>() {
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
         super.onCreate(savedInstanceState)
         aliyunTest()
+        Log.i("MainActivity hash=${this.hashCode()}")
         lifecycleScope.launchWhenStarted {
             val sb = StringBuilder()
             sb.appendLine(
@@ -41,15 +40,14 @@ class MainActivity : BaseReflectBindingActivity<ActivityMainBinding>() {
             })*/
             sb.appendLine("摄像头数量：${Camera.getNumberOfCameras()}")
             sb.appendLine()
+            sb.appendLine("DeviceID=${DeviceIDUtil.getDeviceUniqueID()}")
             mBinding.tvMainActivity.text = sb.toString()
-
-
         }
 
-        requestPermissions(arrayOf(Manifest.permission.CAMERA), 909)
+        //requestPermissions(arrayOf(Manifest.permission.CAMERA), 909)
         var beginTransaction = supportFragmentManager.beginTransaction()
-        val cameraFragment = CameraFragment()
-        beginTransaction.add(R.id.fragment_main_activity, cameraFragment)
+        val fragment = EmptyFragment()
+        beginTransaction.add(R.id.fragment_main_activity, fragment)
         beginTransaction.commitAllowingStateLoss()
 
         /*Looper.myQueue().addIdleHandler {
@@ -68,6 +66,7 @@ class MainActivity : BaseReflectBindingActivity<ActivityMainBinding>() {
             beginTransaction.replace(R.id.fragment_main_activity, cameraFragment)
             beginTransaction.commitAllowingStateLoss()
         }*/
+
     }
 
     private fun testTree() {

@@ -1,6 +1,9 @@
 package io.keyss.library.test
 
+import androidx.lifecycle.LifecycleOwner
+import io.keyss.library.aliyun.Log
 import io.keyss.library.common.base.BaseReflectBindingFragment
+import io.keyss.library.common.broadcast.UsbDevicesReceiver
 import io.keyss.library.test.databinding.FragmentEmptyBinding
 
 /**
@@ -14,6 +17,7 @@ class EmptyFragment : BaseReflectBindingFragment<FragmentEmptyBinding>() {
     }
 
     override fun initViewEveryTimeOnViewCreated() {
-
+        Log.i("this=[${this.hashCode()}], context=[${context.hashCode()}], life=[${viewLifecycleOwner.hashCode()}], as=[${(this as LifecycleOwner).hashCode()}]")
+        //UsbDevicesReceiver.registerReceiverByLifecycle(this)
     }
 }

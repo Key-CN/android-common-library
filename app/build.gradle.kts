@@ -49,5 +49,6 @@ dependencies {
     implementation(deps.kotlin.coroutines_android)
     implementation(project(":library-common"))
     implementation(project(":library-aliyunlog"))
+    implementation(project(":library-id"))
     implementation(kotlin("reflect"))
 }
