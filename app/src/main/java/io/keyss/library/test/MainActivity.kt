@@ -8,13 +8,16 @@ import androidx.lifecycle.lifecycleScope
 import io.keyss.id.DeviceIDUtil
 import io.keyss.library.aliyun.Log
 import io.keyss.library.common.base.BaseReflectBindingActivity
+import io.keyss.library.common.utils.ActivityUtil
 import io.keyss.library.common.utils.AverageUtil
 import io.keyss.library.test.databinding.ActivityMainBinding
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.concurrent.thread
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 import kotlin.system.measureTimeMillis
@@ -24,6 +27,9 @@ class MainActivity : BaseReflectBindingActivity<ActivityMainBinding>() {
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
         super.onCreate(savedInstanceState)
         aliyunTest()
+        thread {
+            Log.i("子线程测试，DeviceID=${DeviceIDUtil.getDeviceUniqueID(null)}")
+        }
         Log.i("MainActivity hash=${this.hashCode()}")
         lifecycleScope.launchWhenStarted {
             val sb = StringBuilder()
@@ -40,7 +46,7 @@ class MainActivity : BaseReflectBindingActivity<ActivityMainBinding>() {
             })*/
             sb.appendLine("摄像头数量：${Camera.getNumberOfCameras()}")
             sb.appendLine()
-            sb.appendLine("DeviceID=${DeviceIDUtil.getDeviceUniqueID()}")
+            //sb.appendLine("DeviceID=${DeviceIDUtil.getDeviceUniqueID()}")
             mBinding.tvMainActivity.text = sb.toString()
         }
 
@@ -67,6 +73,17 @@ class MainActivity : BaseReflectBindingActivity<ActivityMainBinding>() {
             beginTransaction.commitAllowingStateLoss()
         }*/
 
+        GlobalScope.launch {
+            test0123()
+        }
+    }
+
+    private suspend fun test0123() {
+        moveTaskToBack(true)
+        delay(2000)
+
+
+        Log.i("currentTopActivity=${ActivityUtil.getTopActivityComponentName(this)}")
     }
 
     private fun testTree() {

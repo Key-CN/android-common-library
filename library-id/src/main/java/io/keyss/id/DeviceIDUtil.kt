@@ -1,10 +1,10 @@
 package io.keyss.id
 
+import android.app.Application
 import android.content.Context
 import android.os.Build
 import android.util.Log
 import com.baidu.liantian.ac.LH
-import io.keyss.id.utils.ApplicationUtil
 import java.util.*
 
 /**
@@ -15,9 +15,10 @@ import java.util.*
 object DeviceIDUtil {
     private var mDeviceUniqueID: String? = null
 
-    fun getDeviceUniqueID(context: Context): String? {
-        val applicationContext = context.applicationContext
+    fun getDeviceUniqueID(context: Context?): String? {
         if (null == mDeviceUniqueID) {
+            //val applicationContext = if (null == context) ApplicationUtil.getApplication() else context.applicationContext
+            val applicationContext = context?.applicationContext ?: getCurrentApplicationByReflect()
             mDeviceUniqueID = try {
                 LH.init(applicationContext, false)
                 val deviceId = LH.getId(applicationContext, "1")
@@ -30,24 +31,17 @@ object DeviceIDUtil {
         return mDeviceUniqueID
     }
 
-    fun getDeviceUniqueID(): String? {
-        if (null == mDeviceUniqueID) {
-            mDeviceUniqueID = getDeviceUniqueID(ApplicationUtil.getApplication())
-        }
-        return mDeviceUniqueID
-    }
-
-
-    private fun getReflectSerialNumber(): String? {
+    /**
+     * 仅供该包内使用
+     */
+    private fun getCurrentApplicationByReflect(): Application? {
         return try {
-            val c = Class.forName("android.os.SystemProperties")
-            val get = c.getMethod("get", String::class.java, String::class.java)
-            get.invoke(c, "ro.serialno", Build.UNKNOWN) as String
-        } catch (e: Exception) {
+            Class.forName("android.app.ActivityThread")
+                .getMethod("currentApplication")
+                .invoke(null) as? Application?
+        } catch (e: java.lang.Exception) {
             e.printStackTrace()
             null
         }
     }
-
-    private fun String?.isUnknown() = this.isNullOrBlank() || Build.UNKNOWN == this
 }

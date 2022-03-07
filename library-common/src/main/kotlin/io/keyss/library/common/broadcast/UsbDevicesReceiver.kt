@@ -100,16 +100,20 @@ class UsbDevicesReceiver : BroadcastReceiver, LifecycleObserver {
         private val mUsbDevicesReceivers = mutableMapOf<Int, MutableList<UsbDevicesReceiver>>()
         var debug = false
 
+        fun getIntentFilter(): IntentFilter {
+            val intentFilter = IntentFilter()
+            intentFilter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED)
+            intentFilter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED)
+            return intentFilter
+        }
+
         /**
          * 可以注册多个，所以请自行管理
          * fixme 目前这样一个activity内的只会存在一个
          */
         fun registerReceiver(context: Context, onReceiveListener: ((isAttached: Boolean, device: UsbDevice) -> Unit)) {
             val usbDevicesReceiver = UsbDevicesReceiver(onReceiveListener)
-            val intentFilter = IntentFilter()
-            intentFilter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED)
-            intentFilter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED)
-            context.registerReceiver(usbDevicesReceiver, intentFilter)
+            context.registerReceiver(usbDevicesReceiver, getIntentFilter())
             mUsbDevicesReceivers[context.hashCode()]?.also {
                 it.add(usbDevicesReceiver)
             } ?: kotlin.run {

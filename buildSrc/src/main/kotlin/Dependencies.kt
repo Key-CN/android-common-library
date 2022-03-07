@@ -28,7 +28,10 @@ object deps {
         // 协程
         const val coroutines_core = "org.jetbrains.kotlinx:kotlinx-coroutines-core:${versions.kotlin_coroutines}"
 
-        // 包含core
+        //
+        const val coroutines_core_jvm = "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:${versions.kotlin_coroutines}"
+
+        // 包含core，自己应该主要是关于Android Handler.
         const val coroutines_android = "org.jetbrains.kotlinx:kotlinx-coroutines-android:${versions.kotlin_coroutines}"
     }
 
