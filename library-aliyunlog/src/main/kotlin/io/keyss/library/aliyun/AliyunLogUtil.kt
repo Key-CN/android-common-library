@@ -299,6 +299,13 @@ object AliyunLogUtil {
         }
     }
 
+    fun setTopic(topic: String) {
+        mTopic = topic
+        if (::mClient.isInitialized) {
+            mConfig.setTopic(topic)
+        }
+    }
+
     fun v(log: Any?, deeper: Int = 0) {
         printAndUploadLog(Log.VERBOSE, log, deeper)
     }

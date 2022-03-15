@@ -19,7 +19,7 @@ fun Bundle.toMap(): MutableMap<String, Any?> {
 fun Bundle.string(): String {
     val sb = StringBuilder()
     for (k in keySet()) {
-        sb.append("\nKey = [${k}]\nValue = ${get(k)}")
+        sb.append("\nKey = [${k}], Value = [${get(k)}]")
     }
     return sb.toString()
 }

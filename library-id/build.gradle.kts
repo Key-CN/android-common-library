@@ -34,5 +34,7 @@ dependencies {
     implementation(files("libs/liantian.jar"))
 }
 
-// 将library上传到mavenCenter的脚本
-apply("../../public/KeyLibraryMavenCentralUploader.gradle")
+// 将library上传到iShow mavenCenter的脚本
+//apply("../../public/KeyLibraryMavenCentralUploader.gradle")
+// 将library上传到zxsl mavenCenter的脚本
+apply("../../public/zxslLibraryMavenUploader.gradle")

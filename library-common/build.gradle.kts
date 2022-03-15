@@ -3,7 +3,7 @@ plugins {
     kotlin("android")
 }
 
-val libVersion by extra("1.0.15")
+val libVersion by extra("1.0.16")
 
 android {
     compileSdkVersion(versions.compileSdk)
@@ -55,5 +55,7 @@ dependencies {
     compileOnly("com.google.code.gson:gson:2.9.0")
 }
 
-// 将library上传到mavenCenter的脚本
-apply("../../public/KeyLibraryMavenCentralUploader.gradle")
+// 将library上传到iShow mavenCenter的脚本
+//apply("../../public/KeyLibraryMavenCentralUploader.gradle")
+// 将library上传到zxsl mavenCenter的脚本
+apply("../../public/zxslLibraryMavenUploader.gradle")

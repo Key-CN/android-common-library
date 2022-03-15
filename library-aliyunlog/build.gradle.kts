@@ -37,5 +37,7 @@ dependencies {
     implementation("com.aliyun.openservices:aliyun-log-android-sdk:2.6.4")
 }
 
-// 将library上传到mavenCenter的脚本
-apply("../../public/KeyLibraryMavenCentralUploader.gradle")
+// 将library上传到iShow mavenCenter的脚本
+//apply("../../public/KeyLibraryMavenCentralUploader.gradle")
+// 将library上传到zxsl mavenCenter的脚本
+apply("../../public/zxslLibraryMavenUploader.gradle")
