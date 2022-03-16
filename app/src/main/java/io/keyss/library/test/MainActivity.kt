@@ -1,6 +1,5 @@
 package io.keyss.library.test
 
-import android.content.pm.ActivityInfo
 import android.hardware.Camera
 import android.os.Bundle
 import androidx.lifecycle.lifecycleScope
@@ -27,9 +26,11 @@ class MainActivity : BaseReflectBindingActivity<ActivityMainBinding>() {
     override fun onCreate(savedInstanceState: Bundle?) {
         memoryTime++
         staticTime++
-        Log.w("!!!!!!!!!!!!!!! MainActivity(${this.hashCode()}) onCreate !!!!!!!!!!!!!!!" +
-                "\nmemoryTime=$memoryTime, staticTime=$staticTime, globalTime=${App.globalTime}" +
-                "\n${intent.extras?.string()}")
+        Log.w(
+            "!!!!!!!!!!!!!!! MainActivity(${this.hashCode()}) onCreate !!!!!!!!!!!!!!!" +
+                    "\nmemoryTime=$memoryTime, staticTime=$staticTime, globalTime=${App.globalTime}" +
+                    "\n${intent.extras?.string()}"
+        )
         //requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
         super.onCreate(savedInstanceState)
         aliyunTest()

@@ -67,21 +67,24 @@ class Camera1Preview : TextureView, LifecycleObserver {
     private var mViewHeight: Int = 0
     private var mViewWidth: Int = 0
 
-    // 摄像头参数
-    // 摄像头默认方向，大概率是90
-    private var mRotation: Int = 0
-
-    // 视图显示方向
-    private var mDisplayRotation: Int = getDisplayRotation()
-
-    // 用户自定义 额外的旋转角度，用作多设备适配,加法，可以正负使用
+    // -------------------- 摄像头 方向 参数 ------------------------
+    // 用户自定义 额外的旋转角度，用作多设备(比如个别机器摄像头装反)适配,加法，可以正负使用
     var extraRotation = 0
 
-    // 摄像头为了配合屏幕尺寸，一般都是横向观看, 系统名词: LANDSCAPE横向，PORTRAIT纵向
-    private var isLandscape = true
+    /**
+     * 最终相机使用的角度
+     */
+    var finalRealRotation = 0
+        private set
+
+    // 摄像头为了配合屏幕尺寸，一般都是横向观看, 系统名词: LANDSCAPE横向，PORTRAIT纵向，fixme 反而会导致宽高错误
+    //private var isLandscape = true
 
     // 手机的话，前置一般需要镜像一下
-    var isMirror = false
+    var isHorizontalMirror = false
+    // 不要垂直镜像，不好处理角度，不如旋转到正向之后再设置是否需要水平镜像
+    //var isVerticalMirror = false
+    // -------------------------------摄像头 方向 参数------------------------------------
 
     // 回流的数据格式
     var previewFormat = ImageFormat.NV21
@@ -168,10 +171,6 @@ class Camera1Preview : TextureView, LifecycleObserver {
         }
         isPreviewing = true
         cameraId = cameraID
-        val cameraInfo = Camera.CameraInfo()
-        Camera.getCameraInfo(cameraId, cameraInfo)
-        // 摄像头的默认角度
-        mRotation = cameraInfo.orientation
         waitToOpen()
     }
 
@@ -211,15 +210,15 @@ class Camera1Preview : TextureView, LifecycleObserver {
 
         mCamera = Camera.open(cameraId).also {
             it.setPreviewTexture(surfaceTexture)
-
             val parameters = it.parameters
-            // 先拿默认预览尺寸计算下横竖
-            isLandscape = parameters.previewSize.let { size ->
-                size.width > size.height
-            }
+            val cameraInfo = Camera.CameraInfo()
+            Camera.getCameraInfo(cameraId, cameraInfo)
+            // 摄像头的默认角度
+            val cameraRotation = cameraInfo.orientation
+            val displayRotation: Int = getDisplayRotation()
             log(
                 "startPreviewCore, 控件宽高: viewWidth=${mViewWidth}, viewHeight=${mViewHeight}, " +
-                        "相机默认角度=${mRotation}, 视图角度=${mDisplayRotation}, 横向=${isLandscape}, " +
+                        "相机默认角度=${cameraRotation}, 视图角度=${displayRotation}" +
                         "默认的尺寸: 宽=${parameters.previewSize.width}, 高=${parameters.previewSize.height}, " +
                         "期望得到的尺寸: 宽=${expectedPreviewWidth}, 高=${expectedPreviewHeight}"
             )
@@ -227,19 +226,19 @@ class Camera1Preview : TextureView, LifecycleObserver {
 
             // 理论上相机角度和屏幕应该是一致的，纵向屏幕,理论上摄像头和屏幕理论上应该成90度夹角
             // 相机角度默认等于屏幕角度 + 相机默认角度
-            var rotation = mDisplayRotation + mRotation
-            // 如果代码设置了强制横竖屏，那么这个参数就不生效了，需要你手动切换角度了
+            finalRealRotation = displayRotation + cameraRotation
+            // !!!!!!!!!!!!!!!!! 如果代码设置了强制横竖屏，那么这个参数就不生效了，需要你手动切换角度了 !!!!!!!!!!!!!!!!!!!!!!!!
             val isPortrait = resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT
-            val angleDiff = abs(mRotation - mDisplayRotation)
+            val angleDiff = abs(cameraRotation - displayRotation)
             if (isPortrait && (angleDiff == 0 || angleDiff == 180)) {
-                rotation += 90
+                finalRealRotation += 90
             } else if (!isPortrait && (angleDiff == 90 || angleDiff == 270)) {
-                rotation -= 90
+                finalRealRotation -= 90
             }
-            rotation = correctRotation(rotation + extraRotation)
+            finalRealRotation = correctRotation(finalRealRotation + extraRotation)
             // 工控机很多装配不严谨，摄像头是装反的情况，就需要手动指定extraRotation参数，甚至可能出现一批机器，一部分0，一部分180的安装方向
-            log("最终方向：rotation=$rotation, isPortrait=$isPortrait")
-            it.setDisplayOrientation(rotation)
+            log("最终方向=$finalRealRotation, 是否竖屏=$isPortrait")
+            it.setDisplayOrientation(finalRealRotation)
 
 
             log("默认的预览格式=${parameters.previewFormat}, 需设定的预览格式=${previewFormat}, 所有支持的预览格式=${parameters.supportedPreviewFormats}")
@@ -252,10 +251,6 @@ class Camera1Preview : TextureView, LifecycleObserver {
             } else {
                 mPreviewWidth = mViewWidth
                 mPreviewHeight = mViewHeight
-            }
-            // 正确时：横向：宽大于高，纵向：宽小于高
-            if ((isLandscape && mPreviewWidth < mPreviewHeight) || (!isLandscape && mPreviewWidth > mPreviewHeight)) {
-                swapWidthHeight()
             }
 
             val bestSupportedSize = getBestSupportedSize(parameters.supportedPreviewSizes, mPreviewWidth, mPreviewHeight)
@@ -291,7 +286,7 @@ class Camera1Preview : TextureView, LifecycleObserver {
                 }
             }
 
-            if (isMirror) {
+            if (isHorizontalMirror) {
                 scaleY = -1f
             }
             // debug模式下输出一下数据
@@ -303,7 +298,6 @@ class Camera1Preview : TextureView, LifecycleObserver {
                     "Real预览Size: 宽=${it.parameters.previewSize.width}, 高=${it.parameters.previewSize.height}, " +
                             "帧率: ${it.parameters.previewFrameRate}, " +
                             "Fps: ${fpsRange.contentToString()}, " +
-                            "横向: $isLandscape, " +
                             "数据格式: ${it.parameters.previewFormat}, " +
                             "对焦模式: ${it.parameters.focusMode}"
                 )
@@ -312,17 +306,6 @@ class Camera1Preview : TextureView, LifecycleObserver {
             it.startPreview()
             onPreviewStartFinish?.invoke(getRealPreviewSize())
         }
-    }
-
-    /**
-     * 交换宽高
-     */
-    private fun swapWidthHeight() {
-        log("交换宽高前: mPreviewWidth=${mPreviewWidth}, mPreviewHeight=${mPreviewHeight}")
-        mPreviewWidth = mPreviewWidth xor mPreviewHeight
-        mPreviewHeight = mPreviewWidth xor mPreviewHeight
-        mPreviewWidth = mPreviewWidth xor mPreviewHeight
-        log("交换宽高后: mPreviewWidth=${mPreviewWidth}, mPreviewHeight=${mPreviewHeight}")
     }
 
     fun stopPreview() {
@@ -411,7 +394,11 @@ class Camera1Preview : TextureView, LifecycleObserver {
      */
     fun getRealPreviewSize(): Array<Int> {
         val previewSize = mCamera?.parameters?.previewSize
-        return arrayOf(previewSize?.width ?: mPreviewWidth, previewSize?.height ?: mPreviewHeight)
+        return if (null == previewSize) {
+            arrayOf(mPreviewWidth, mPreviewHeight)
+        } else {
+            arrayOf(previewSize.width, previewSize.height)
+        }
     }
 
     private fun getBestSupportedSize(sizes: List<Camera.Size>?, width: Int, height: Int): Camera.Size {

@@ -49,7 +49,7 @@ object ApplicationUtil {
     }
 
     /**
-     *
+     * 安卓11测试未生效
      */
     fun restartAppHard(c: Context, packageName: String? = null): Boolean {
         val appContext = c.applicationContext
