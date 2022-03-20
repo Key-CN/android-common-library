@@ -9,6 +9,7 @@ import io.keyss.library.common.base.BaseReflectBindingActivity
 import io.keyss.library.common.extensions.string
 import io.keyss.library.common.utils.ActivityUtil
 import io.keyss.library.common.utils.ApplicationUtil
+import io.keyss.library.common.utils.PlaySoundUtil
 import io.keyss.library.test.databinding.ActivityMainBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -79,8 +80,20 @@ class MainActivity : BaseReflectBindingActivity<ActivityMainBinding>() {
             beginTransaction.commitAllowingStateLoss()
         }*/
 
+        PlaySoundUtil.init(this)
+        //PlaySoundUtil.defaultSpeed = 1.9f
         lifecycleScope.launch(Dispatchers.Main) {
-            test0123()
+            //test0123()
+            delay(1_000)
+            /*PlaySoundUtil.playRawSound(
+                R.raw.result_health_info_normal,
+                isExistSameOverwrite = true,
+                isCutAndTop = true,
+                isCurrentReplay = true
+            )*/
+            PlaySoundUtil.playRawSound(true, R.raw.result_health_info_normal, R.raw.result_health_info_normal)
+            delay(1_000)
+            PlaySoundUtil.setSpeed(2f, true)
         }
     }
 

@@ -3,6 +3,7 @@ package io.keyss.library.common.utils
 import android.content.Context
 import android.content.res.AssetFileDescriptor
 import android.media.MediaPlayer
+import android.os.Build
 import androidx.annotation.RawRes
 import java.util.*
 
@@ -21,14 +22,62 @@ object PlaySoundUtil {
         Stack()
     }
 
-    fun init(applicationContext: Context) {
-        mApplicationContext = applicationContext
+    private var mSpeedUnableSet = false
+    var defaultSpeed: Float = 1.0f
+        set(value) {
+            field = when {
+                value > 2f -> 2f
+                value < 0f -> 0f
+                else -> value
+            }
+        }
+
+    fun init(context: Context) {
+        mApplicationContext = context.applicationContext
         mMediaPlayer.isLooping = false
         mMediaPlayer.setOnCompletionListener {
             println("playRawSound Completion ResID=${mCurrentResID}")
             mCurrentResID = null
             playNext()
         }
+    }
+
+    fun setSpeed(speed: Float? = null, isDefault: Boolean = false) {
+        // 速度未改变，或已知的无法改变
+        if (this.defaultSpeed == speed || mSpeedUnableSet) {
+            return
+        }
+        // 相当于不设置速度
+        if (null == speed && defaultSpeed == 1f) {
+            return
+        }
+        if (isDefault && speed != null) {
+            defaultSpeed = speed
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            try {
+                val playbackParams = mMediaPlayer.playbackParams
+                playbackParams.speed = speed ?: this.defaultSpeed
+                mMediaPlayer.playbackParams = playbackParams
+                if (!mMediaPlayer.isPlaying) {
+                    mMediaPlayer.pause()
+                }
+            } catch (e: Exception) {
+                mSpeedUnableSet = true
+                e.printStackTrace()
+            }
+        } else {
+            mSpeedUnableSet = true
+        }
+    }
+
+    fun playRawSound(isCutAndTop: Boolean, @RawRes vararg resId: Int) {
+        if (isCutAndTop) {
+            mList.clear()
+            mMediaPlayer.stop()
+        }
+        mList.addAll(resId.asList())
+        playNext()
     }
 
     /**
@@ -72,6 +121,7 @@ object PlaySoundUtil {
             mMediaPlayer.setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
             afd.close()
             mMediaPlayer.prepare()
+            setSpeed()
             mMediaPlayer.start()
         } catch (e: Exception) {
             e.printStackTrace()

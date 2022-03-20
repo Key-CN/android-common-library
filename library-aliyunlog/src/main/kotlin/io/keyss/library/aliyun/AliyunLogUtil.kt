@@ -284,7 +284,7 @@ object AliyunLogUtil {
         thread {
             val nextTime = try {
                 // 提前5分钟，且至少大于1分钟，ParseException
-                val remainingTime = mUTCFormatter.parse(sts.expiration)!!.time - System.currentTimeMillis() - 5 * 60 * 1_000L
+                val remainingTime = mUTCFormatter.parse(sts.expiration!!)!!.time - System.currentTimeMillis() - 5 * 60 * 1_000L
                 print("阿里云 sts token 剩余有效期: ${remainingTime / 1000 / 60}分钟")
                 remainingTime.takeIf { it > 60L * 1_000 } ?: throw Exception("过期时间数据不正确，expiration=${sts.expiration}")
             } catch (exc: Exception) {
