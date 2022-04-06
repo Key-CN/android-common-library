@@ -8,27 +8,47 @@ import com.google.gson.reflect.TypeToken
 import java.lang.reflect.Type
 
 object GsonUtil {
-    private val GSON = createGson(true)
+    private var mGsonBuilder: GsonBuilder? = null
 
-    private val GSON_NO_NULLS = createGson(false)
+    private val GSON by lazy { createGson(true) }
 
-    private val GSON_EXCLUDE = GsonBuilder().excludeFieldsWithoutExposeAnnotation().serializeNulls().create()
+    private val GSON_NO_NULLS by lazy { createGson(false) }
 
-    private val GSON_EXCLUDE_NO_NULLS = GsonBuilder().excludeFieldsWithoutExposeAnnotation().create()
+    private val GSON_EXCLUDE by lazy { createGson(serializeNulls = true, requireExpose = true) }
+
+    private val GSON_EXCLUDE_NO_NULLS by lazy { createGson(serializeNulls = false, requireExpose = true) }
 
     fun getGson(includeNulls: Boolean = false) = if (includeNulls) GSON else GSON_NO_NULLS
 
-    private fun createGson(serializeNulls: Boolean): Gson {
-        val builder = GsonBuilder()
+    fun getGsonBuilder(): GsonBuilder {
+        return mGsonBuilder ?: GsonBuilder()
+    }
+
+    /**
+     * @param serializeNulls 是否序列化Null字段，一般false，节省长度
+     * @param requireExpose 排除没有Expose注解的字段，也就是是否只序列化有Expose注解的字段，默认false
+     */
+    private fun createGson(serializeNulls: Boolean, requireExpose: Boolean = false): Gson {
+        val builder = getGsonBuilder()
         if (serializeNulls) builder.serializeNulls()
+        if (requireExpose) builder.excludeFieldsWithoutExposeAnnotation()
         return builder.create()
+    }
+
+    /**
+     * 为了对应php后台，添加Gson解析容错，这个写的不错，https://github.com/getActivity/GsonFactory
+     * implementation 'com.github.getActivity:GsonFactory:5.2'
+     * 早于第一次使用即可
+     */
+    fun customGson(gsonBuilder: GsonBuilder) {
+        mGsonBuilder = gsonBuilder
     }
 
     /**
      * 我要默认不输出null字段
      */
     fun toJson(any: Any?, includeNulls: Boolean = false): String {
-        return if (includeNulls) GSON.toJson(any) else GSON_NO_NULLS.toJson(any)
+        return getGson(includeNulls).toJson(any)
     }
 
     fun toJsonExcludeFields(any: Any?, includeNulls: Boolean = false): String {

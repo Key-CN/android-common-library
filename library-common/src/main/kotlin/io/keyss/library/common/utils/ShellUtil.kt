@@ -11,6 +11,12 @@ object ShellUtil {
 
     data class Result(val success: Boolean, val text: String)
 
+    fun executeSuShell(vararg cmd: String): Result {
+        val joinToString = cmd.joinToString(separator = ";"/*, postfix = ";"*/)
+        //println("joinTo su String=$joinToString")
+        return executeShell("su", "-c", joinToString)
+    }
+
     fun executeShell(vararg cmd: String): Result {
         if (cmd.isEmpty()) {
             return Result(false, "命令不可以为空")
@@ -19,7 +25,7 @@ object ShellUtil {
         val process = try {
             if (cmd.size == 1) runtime.exec(cmd[0]) else runtime.exec(cmd)
         } catch (e: Exception) {
-            return Result(false, "命令执行错误：${e}")
+            return Result(false, "命令执行错误，error：${e}")
         }
         val normalText = try {
             process.inputStream.bufferedReader().use { br ->
@@ -90,17 +96,5 @@ object ShellUtil {
         ) {
             process.destroy()
         }
-    }
-
-    /**
-     * 打开网络adb
-     */
-    fun openNetworkADB() {
-        val result = executeShell(
-            "setprop service.adb.tcp.port 5555",
-            "stop adbd",
-            "start adbd"
-        )
-        println("openNetworkADB resulte=${result}")
     }
 }

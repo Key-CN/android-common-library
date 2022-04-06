@@ -1,16 +1,13 @@
 package io.keyss.library.common.network
 
 import android.content.Context
-import android.content.Intent
-import android.location.LocationManager
 import android.net.ConnectivityManager
 import android.net.LinkAddress
 import android.net.NetworkCapabilities
 import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
 import android.os.Build
-import android.provider.Settings
-import android.widget.Toast
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import io.keyss.library.common.utils.ShellUtil
@@ -78,7 +75,7 @@ object NetworkUtil {
                 if (isUnreachable()) {
                     append(originalText)
                 } else {
-                    append("丢包率=${packetLossRate}, min=${min}, avg=${avg}, max=${max}, mdev=${mdev}")
+                    append("丢包率=${packetLossRate}, min=${min}ms, avg=${avg}ms, max=${max}ms, mdev=${mdev}ms")
                 }
             }.toString()
         }
@@ -410,5 +407,41 @@ object NetworkUtil {
         sb.append(ipInt shr 16 and 0xFF).append(".")
         sb.append(ipInt shr 24 and 0xFF)
         return sb.toString()
+    }
+
+    /**
+     * 设置公共DNS
+     */
+    fun setPublicDNS() {
+        ShellUtil.executeSuShell("setprop net.dns2 223.5.5.5", "setprop net.dns1 114.114.114.114")
+    }
+
+    /**
+     * 测试外网是否连通
+     *
+     * @param url 使用域名测试会涉及到域名解析
+     * @return
+     */
+    fun isInternetConnectivity(url: String = "http://180.97.34.94/", timeout: Int = 10_000): Boolean {
+        return getConnectDelay(url, timeout) != null
+    }
+
+    /**
+     * 测试真连接延迟
+     */
+    fun getConnectDelay(url: String = "http://180.97.34.94/", timeout: Int = 10_000): Long? {
+        var delay: Long? = null
+        try {
+            val start = System.currentTimeMillis()
+            val conn = URL(url).openConnection() as HttpURLConnection
+            conn.requestMethod = "HEAD"
+            conn.connectTimeout = timeout
+            conn.readTimeout = timeout
+            conn.connect()
+            delay = System.currentTimeMillis() - start
+        } catch (e: Exception) {
+            Log.e("NetworkUtil", "请求错误, url = [$url], error = ${e.message}", e)
+        }
+        return delay
     }
 }

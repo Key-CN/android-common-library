@@ -2,7 +2,6 @@ package io.keyss.id
 
 import android.app.Application
 import android.content.Context
-import android.os.Build
 import android.util.Log
 import com.baidu.liantian.ac.LH
 import java.util.*
@@ -13,8 +12,11 @@ import java.util.*
  * Description:
  */
 object DeviceIDUtil {
+    private const val TAG = "DeviceIDUtil"
+
     private var mDeviceUniqueID: String? = null
 
+    @JvmStatic
     fun getDeviceUniqueID(context: Context?): String? {
         if (null == mDeviceUniqueID) {
             //val applicationContext = if (null == context) ApplicationUtil.getApplication() else context.applicationContext
@@ -24,7 +26,7 @@ object DeviceIDUtil {
                 val deviceId = LH.getId(applicationContext, "1")
                 deviceId.second.uppercase(Locale.getDefault())
             } catch (e: Exception) {
-                Log.e("DeviceIDUtil", "Load liantian ac failed", e)
+                Log.e(TAG, "Load liantian ac failed", e)
                 null
             }
         }
@@ -40,7 +42,7 @@ object DeviceIDUtil {
                 .getMethod("currentApplication")
                 .invoke(null) as? Application?
         } catch (e: java.lang.Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "Reflect Application failed", e)
             null
         }
     }

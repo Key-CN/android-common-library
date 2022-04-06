@@ -1,5 +1,3 @@
-import org.gradle.kotlin.dsl.kotlin
-
 object versions {
     const val compileSdk = 31
     const val minSdk = 21

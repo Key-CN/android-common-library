@@ -286,8 +286,10 @@ class Camera1Preview : TextureView, LifecycleObserver {
                 }
             }
 
-            if (isHorizontalMirror) {
-                scaleY = -1f
+            scaleX = if (isHorizontalMirror) {
+                -1f
+            } else {
+                1f
             }
             // debug模式下输出一下数据
             if (isDebug) {

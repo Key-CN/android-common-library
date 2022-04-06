@@ -3,7 +3,6 @@ package io.keyss.library.test
 import androidx.lifecycle.LifecycleOwner
 import io.keyss.library.aliyun.Log
 import io.keyss.library.common.base.BaseReflectBindingFragment
-import io.keyss.library.common.broadcast.UsbDevicesReceiver
 import io.keyss.library.test.databinding.FragmentEmptyBinding
 
 /**
