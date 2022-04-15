@@ -440,7 +440,7 @@ object NetworkUtil {
             conn.connect()
             delay = System.currentTimeMillis() - start
         } catch (e: Exception) {
-            Log.e("NetworkUtil", "请求错误, url = [$url], error = ${e.message}", e)
+            Log.w("NetworkUtil", "请求错误, url = [$url], error = ${e.message}", e)
         }
         return delay
     }

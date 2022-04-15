@@ -348,7 +348,7 @@ object AliyunLogUtil {
     private fun formatLogMessage(log: Any?, deeper: Int, tr: Throwable?): String {
         val logBuilder = StringBuilder(getLogString(log, deeper))
         if (tr != null) {
-            logBuilder.append('\n').append(Log.getStackTraceString(tr))
+            logBuilder.appendLine().append(Log.getStackTraceString(tr))
         }
         return logBuilder.toString()
     }
@@ -375,7 +375,9 @@ object AliyunLogUtil {
         mFixedDynamicContents?.forEach { entry ->
             // 排除获取出来为null的值
             entry.value.invoke()?.let {
-                aliyunLog.putContent(entry.key, it)
+                if (it.isNotBlank()) {
+                    aliyunLog.putContent(entry.key, it)
+                }
             }
         }
         if (::mClient.isInitialized && isTokenValid) {

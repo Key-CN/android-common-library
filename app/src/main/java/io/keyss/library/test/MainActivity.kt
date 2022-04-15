@@ -7,11 +7,11 @@ import io.keyss.id.DeviceIDUtil
 import io.keyss.library.aliyun.Log
 import io.keyss.library.common.base.BaseReflectBindingActivity
 import io.keyss.library.common.extensions.string
-import io.keyss.library.common.utils.ActivityUtil
-import io.keyss.library.common.utils.ApplicationUtil
-import io.keyss.library.common.utils.ShellUtil
+import io.keyss.library.common.utils.*
 import io.keyss.library.test.databinding.ActivityMainBinding
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.concurrent.thread
@@ -81,21 +81,32 @@ class MainActivity : BaseReflectBindingActivity<ActivityMainBinding>() {
         val executeSuShell = ShellUtil.executeSuShell("pwd", "cd sdcard", "pwd", "ls")
         Log.i("executeSuShell=$executeSuShell")
 
+        /*lifecycleScope.launch(Dispatchers.IO) {
+            DingUtil.WEBHOOK = "https://oapi.dingtalk.com/robot/send?access_token=382bd3fdadfc29aae77754bafc89a8562e8c13854de3213e383cd97aa4cef4b5"
+            DingUtil.SECRET = "SEC077ca37187a3bf68a0351c06b57daf2f3d00cd2cb41611ad07996463dc0724e3"
+            DingUtil.sendText("test")
+        }*/
         /*PlaySoundUtil.init(this)
         //PlaySoundUtil.defaultSpeed = 1.9f
-        lifecycleScope.launch(Dispatchers.Main) {
+        lifecycleScope.launch(Dispatchers.IO) {
             //test0123()
             delay(1_000)
-            *//*PlaySoundUtil.playRawSound(
-                R.raw.result_health_info_normal,
-                isExistSameOverwrite = true,
-                isCutAndTop = true,
-                isCurrentReplay = true
-            )*//*
-            PlaySoundUtil.playRawSound(true, R.raw.result_health_info_normal, R.raw.result_health_info_normal)
+            PlaySoundUtil.playRawSound(
+                //R.raw.result_health_info_normal,
+                213168123,
+                isExistSameOverwrite = false,
+                isCutAndTop = false,
+                isCurrentReplay = false
+            )
+            PlaySoundUtil.playRawSound(true, 1223412341, R.raw.result_health_info_normal)
             delay(1_000)
             PlaySoundUtil.setSpeed(2f, true)
         }*/
+        TTSUtil.init(this)
+        lifecycleScope.launch(Dispatchers.Main) {
+            delay(1000)
+            TTSUtil.speak("测温失败，请重新开始！")
+        }
     }
 
     override fun onDestroy() {

@@ -1,6 +1,11 @@
 package io.keyss.library.common.ding
 
 import android.util.Base64
+import io.keyss.library.common.utils.GsonUtil
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.net.URLEncoder
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
@@ -11,8 +16,17 @@ import javax.crypto.spec.SecretKeySpec
  * Description:
  */
 object DingUtil {
+    private val okHttpClient by lazy {
+        OkHttpClient()
+    }
+
     var WEBHOOK = ""
     var SECRET = ""
+
+    /**
+     * 多少时间内只允许发送一条相同的消息，默认1分钟
+     */
+    var SEND_THE_SAME_TEXT_TIME = 60 * 1_000
     private var mLastText: String = ""
     private var mLastTime: Long = 0
     var template = ""
@@ -34,7 +48,7 @@ $message
 
     fun sendMarkdown(title: String, text: String, vararg ats: Linkman) {
         // 同一条消息一分钟内只发一次
-        if (text == mLastText && System.currentTimeMillis() - mLastTime < 60 * 1_000) {
+        if (text == mLastText && (System.currentTimeMillis() - mLastTime < SEND_THE_SAME_TEXT_TIME)) {
             return
         }
         mLastText = text
@@ -48,7 +62,7 @@ $message
                 name += ("@${it.phoneNumber} ")
             }
         }
-        sendDingMessage(MarkdownMessage("Launcher：$title", "# $title\n${text}$name", arrayList))
+        sendDingMessage(MarkdownMessage(title, "# $title\n${text}$name", arrayList))
     }
 
     fun sendText(text: String, vararg ats: Linkman) {
@@ -69,6 +83,9 @@ $message
         sendDingMessage(TextMessage(text + name, arrayList))
     }
 
+    /**
+     * 耗时，请在子现场调用
+     */
     private fun sendDingMessage(message: DingMessage) {
         val timestamp = System.currentTimeMillis()
         val sign = try {
@@ -78,7 +95,21 @@ $message
             return
         }
         val url = "$WEBHOOK&timestamp=${timestamp}&sign=${sign}"
+
         // 网络请求，用同步方案
+        val toJson = GsonUtil.toJson(message)
+        val request = Request
+            .Builder()
+            .url(url)
+            .post(toJson.toRequestBody("application/json".toMediaType()))
+            .build()
+        //println("sendDingMessage: requestBody=${request.body}")
+        try {
+            val response = okHttpClient.newCall(request).execute()
+            println("sendDingMessage: code=${response.code}, body=${response.body?.string()}")
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     @Throws(Exception::class)

@@ -60,7 +60,7 @@ abstract class BaseReflectBindingDialogFragment<T : ViewBinding> : DialogFragmen
     }*/
 
     /**
-     * onCreateView -> onViewCreated -> onActivityCreated -> onStart
+     * onAttach -> onCreate -> onCreateDialog -> onCreateView -> onViewCreated -> onActivityCreated -> onStart
      */
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)

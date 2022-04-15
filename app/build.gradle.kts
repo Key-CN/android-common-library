@@ -54,4 +54,6 @@ dependencies {
     implementation(project(":library-aliyunlog"))
     implementation(project(":library-id"))
     implementation(kotlin("reflect"))
+    implementation("com.google.code.gson:gson:2.9.0")
+    implementation(deps.square.okhttp3)
 }

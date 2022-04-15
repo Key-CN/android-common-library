@@ -5,7 +5,7 @@ import android.content.res.AssetFileDescriptor
 import android.media.MediaPlayer
 import android.os.Build
 import androidx.annotation.RawRes
-import java.util.*
+import java.util.concurrent.ConcurrentLinkedQueue
 
 /**
  * @author Key
@@ -14,12 +14,14 @@ import java.util.*
  */
 object PlaySoundUtil {
     private lateinit var mApplicationContext: Context
+
+    @Volatile
     private var mCurrentResID: Int? = null
     private val mMediaPlayer: MediaPlayer by lazy {
         MediaPlayer()
     }
-    private val mList: Stack<Int> by lazy {
-        Stack()
+    private val mList: ConcurrentLinkedQueue<Int> by lazy {
+        ConcurrentLinkedQueue()
     }
 
     private var mSpeedUnableSet = false
@@ -36,7 +38,8 @@ object PlaySoundUtil {
         mApplicationContext = context.applicationContext
         mMediaPlayer.isLooping = false
         mMediaPlayer.setOnCompletionListener {
-            println("playRawSound Completion ResID=${mCurrentResID}")
+            // stop() 会走一次
+            println("playRawSound Completion ResID=${mCurrentResID}, 剩余${mList.size}个")
             mCurrentResID = null
             playNext()
         }
@@ -74,7 +77,9 @@ object PlaySoundUtil {
     fun playRawSound(isCutAndTop: Boolean, @RawRes vararg resId: Int) {
         if (isCutAndTop) {
             mList.clear()
-            mMediaPlayer.stop()
+            if (mMediaPlayer.isPlaying) {
+                mMediaPlayer.stop()
+            }
         }
         mList.addAll(resId.asList())
         playNext()
@@ -89,7 +94,9 @@ object PlaySoundUtil {
         if (isCutAndTop) {
             mList.clear()
             mList.add(resId)
-            mMediaPlayer.stop()
+            if (mMediaPlayer.isPlaying) {
+                mMediaPlayer.stop()
+            }
             playNext()
             return
         }
@@ -108,15 +115,15 @@ object PlaySoundUtil {
 
     @Synchronized
     private fun playNext() {
-        if (mList.empty() || mMediaPlayer.isPlaying) {
+        val topRes = mList.poll()
+        if (topRes == null || mMediaPlayer.isPlaying) {
             println("playRawSound playNext size=${mList.size}, isPlaying=${mMediaPlayer.isPlaying}")
             return
         }
+        println("playRawSound playNext start ResID=${topRes}, 剩余${mList.size}个")
+        mCurrentResID = topRes
+        mMediaPlayer.reset()
         try {
-            println("playRawSound playNext start size=${mList.size}")
-            val topRes = mList.pop()
-            mCurrentResID = topRes
-            mMediaPlayer.reset()
             val afd: AssetFileDescriptor = mApplicationContext.resources.openRawResourceFd(topRes)
             mMediaPlayer.setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
             afd.close()
@@ -127,7 +134,7 @@ object PlaySoundUtil {
             e.printStackTrace()
             mCurrentResID = null
             // 报错继续下一个，直接播完
-            //playNext()
+            playNext()
         }
     }
 }

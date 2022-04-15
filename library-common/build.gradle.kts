@@ -1,10 +1,11 @@
 plugins {
     id("com.android.library")
+    //kotlin("kapt")
     kotlin("android")
 }
 
 //val libVersion by extra("1.0.23-SNAPSHOT")
-val libVersion by extra("1.0.22")
+val libVersion by extra("1.0.24")
 
 android {
     compileSdkVersion(versions.compileSdk)
