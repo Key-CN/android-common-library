@@ -89,7 +89,16 @@ class MainActivity : BaseReflectBindingActivity<ActivityMainBinding>() {
             val WEBHOOK = "https://oapi.dingtalk.com/robot/send?access_token=382bd3fdadfc29aae77754bafc89a8562e8c13854de3213e383cd97aa4cef4b5"
             val SECRET = "SEC077ca37187a3bf68a0351c06b57daf2f3d00cd2cb41611ad07996463dc0724e3"
             DingUtil.init(WEBHOOK, SECRET)
-            DingUtil.sendText("test")
+            DingUtil.sendMarkdown("test",
+            """
+                * ${DingUtil.applyRed("applyRed~~~~~~~~~~")}
+                * ${DingUtil.applyGreen("applyGreen~~~~~~~~~~")}
+                * ${DingUtil.applyBlue("applyBlue~~~~~~~~~~")}
+                * ${DingUtil.applyYellow("applyYellow~~~~~~~~~~")}
+                * ${DingUtil.applyCyan("applyCyan~~~~~~~~~~")}
+                * ${DingUtil.applyMagenta("applyMagenta~~~~~~~~~~")}
+            """.trimIndent()
+                )
         }
         /*PlaySoundUtil.init(this)
         //PlaySoundUtil.defaultSpeed = 1.9f

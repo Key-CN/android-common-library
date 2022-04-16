@@ -116,4 +116,35 @@ object DingUtil {
         val signData: ByteArray = mac.doFinal(stringToSign.toByteArray())
         return URLEncoder.encode(Base64.encodeToString(signData, Base64.NO_WRAP), "UTF-8")
     }
+
+    /**
+     * @param color # 开头的RGB16进制
+     */
+    fun applyColor(text: String, color: String): String {
+        return "<font color=\"${color}\">${text}</font>"
+    }
+
+    fun applyRed(text: String): String {
+        return applyColor(text, "#F0524F")
+    }
+
+    fun applyGreen(text: String): String {
+        return applyColor(text, "#5C962C")
+    }
+
+    fun applyBlue(text: String): String {
+        return applyColor(text, "#3993D4")
+    }
+
+    fun applyYellow(text: String): String {
+        return applyColor(text, "#A68A0D")
+    }
+
+    fun applyCyan(text: String): String {
+        return applyColor(text, "#00A3A3")
+    }
+
+    fun applyMagenta(text: String): String {
+        return applyColor(text, "#A771BF")
+    }
 }
