@@ -47,13 +47,22 @@ object RequestUtil {
                 }
             }
 
+            httpURLConnection.errorStream
+
             val sb = StringBuilder("code=${httpURLConnection.responseCode}, message=${httpURLConnection.responseMessage}")
 
             // 读返回
-            httpURLConnection.inputStream.bufferedReader().use {
-                // 响应的数据
-                sb.appendLine()
-                sb.append("body=${it.readText()}")
+            sb.appendLine()
+            if (httpURLConnection.responseCode in 200..299) {
+                httpURLConnection.inputStream.bufferedReader().use {
+                    // 响应的数据
+                    sb.append("body=${it.readText()}")
+                }
+            } else {
+                httpURLConnection.errorStream.bufferedReader().use {
+                    // 响应的数据
+                    sb.append("error=${it.readText()}")
+                }
             }
             Log.i("RequestUtil", "简单POST请求返回：${sb}")
         } catch (e: Exception) {
