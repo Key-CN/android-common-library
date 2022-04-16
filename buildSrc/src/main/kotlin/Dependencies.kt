@@ -3,8 +3,8 @@ object versions {
     const val minSdk = 21
     const val targetSdk = 31
 
-    const val kotlin = "1.6.10"
-    const val kotlin_coroutines = "1.6.0-native-mt"
+    const val kotlin = "1.6.20"
+    const val kotlin_coroutines = "1.6.0"
     const val ktx = "1.7.0"
     const val appcompat = "1.4.1"
     const val annotation = "1.3.0"

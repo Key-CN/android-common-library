@@ -439,6 +439,7 @@ object NetworkUtil {
             conn.readTimeout = timeout
             conn.connect()
             delay = System.currentTimeMillis() - start
+            conn.disconnect()
         } catch (e: Exception) {
             Log.w("NetworkUtil", "请求错误, url = [$url], error = ${e.message}", e)
         }

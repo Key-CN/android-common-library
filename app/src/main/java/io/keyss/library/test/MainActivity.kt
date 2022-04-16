@@ -6,8 +6,12 @@ import androidx.lifecycle.lifecycleScope
 import io.keyss.id.DeviceIDUtil
 import io.keyss.library.aliyun.Log
 import io.keyss.library.common.base.BaseReflectBindingActivity
+import io.keyss.library.common.ding.DingUtil
 import io.keyss.library.common.extensions.string
-import io.keyss.library.common.utils.*
+import io.keyss.library.common.utils.ActivityUtil
+import io.keyss.library.common.utils.ApplicationUtil
+import io.keyss.library.common.utils.ShellUtil
+import io.keyss.library.common.utils.TTSUtil
 import io.keyss.library.test.databinding.ActivityMainBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -81,11 +85,12 @@ class MainActivity : BaseReflectBindingActivity<ActivityMainBinding>() {
         val executeSuShell = ShellUtil.executeSuShell("pwd", "cd sdcard", "pwd", "ls")
         Log.i("executeSuShell=$executeSuShell")
 
-        /*lifecycleScope.launch(Dispatchers.IO) {
-            DingUtil.WEBHOOK = "https://oapi.dingtalk.com/robot/send?access_token=382bd3fdadfc29aae77754bafc89a8562e8c13854de3213e383cd97aa4cef4b5"
-            DingUtil.SECRET = "SEC077ca37187a3bf68a0351c06b57daf2f3d00cd2cb41611ad07996463dc0724e3"
+        lifecycleScope.launch(Dispatchers.IO) {
+            val WEBHOOK = "https://oapi.dingtalk.com/robot/send?access_token=382bd3fdadfc29aae77754bafc89a8562e8c13854de3213e383cd97aa4cef4b5"
+            val SECRET = "SEC077ca37187a3bf68a0351c06b57daf2f3d00cd2cb41611ad07996463dc0724e3"
+            DingUtil.init(WEBHOOK, SECRET)
             DingUtil.sendText("test")
-        }*/
+        }
         /*PlaySoundUtil.init(this)
         //PlaySoundUtil.defaultSpeed = 1.9f
         lifecycleScope.launch(Dispatchers.IO) {

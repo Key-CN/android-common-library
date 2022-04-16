@@ -2,8 +2,8 @@ package io.keyss.library.common.network
 
 /**
  * @author Key
- * Time: 2021/07/09 11:36
- * Description: 网卡信息，只保留IPv4
+ * @date 2021/07/09 11:36
+ * @Description: 网卡信息，只保留IPv4
  */
 data class InterfaceConfig(
     /** 接口名 */

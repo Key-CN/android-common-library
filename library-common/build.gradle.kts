@@ -5,7 +5,7 @@ plugins {
 }
 
 //val libVersion by extra("1.0.23-SNAPSHOT")
-val libVersion by extra("1.0.24")
+val libVersion by extra("1.0.25")
 
 android {
     compileSdkVersion(versions.compileSdk)

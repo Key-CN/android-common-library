@@ -1,11 +1,9 @@
 package io.keyss.library.common.ding
 
 import android.util.Base64
+import android.util.Log
+import io.keyss.library.common.network.RequestUtil
 import io.keyss.library.common.utils.GsonUtil
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
 import java.net.URLEncoder
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
@@ -16,20 +14,27 @@ import javax.crypto.spec.SecretKeySpec
  * Description:
  */
 object DingUtil {
-    private val okHttpClient by lazy {
-        OkHttpClient()
-    }
+    private lateinit var mWebhook: String
+    private lateinit var mSecret: String
 
-    var WEBHOOK = ""
-    var SECRET = ""
+    private var mLastText: String = ""
+    private var mLastTime: Long = 0
 
     /**
      * 多少时间内只允许发送一条相同的消息，默认1分钟
      */
-    var SEND_THE_SAME_TEXT_TIME = 60 * 1_000
-    private var mLastText: String = ""
-    private var mLastTime: Long = 0
-    var template = ""
+    var allowSendTheSameTextTime = 60 * 1_000
+
+    /**
+     * md发送模版
+     */
+    var markdownTemplate = ""
+
+
+    fun init(webhook: String, secret: String) {
+        mWebhook = webhook
+        mSecret = secret
+    }
 
     /**
      * 发送模版消息
@@ -41,14 +46,11 @@ object DingUtil {
     /**
      * 套用模版
      */
-    fun applyMarkdownTemplate(message: String): String = """
-$template
-$message
-"""
+    fun applyMarkdownTemplate(message: String): String = "$markdownTemplate\n$message"
 
     fun sendMarkdown(title: String, text: String, vararg ats: Linkman) {
         // 同一条消息一分钟内只发一次
-        if (text == mLastText && (System.currentTimeMillis() - mLastTime < SEND_THE_SAME_TEXT_TIME)) {
+        if (text == mLastText && (System.currentTimeMillis() - mLastTime < allowSendTheSameTextTime)) {
             return
         }
         mLastText = text
@@ -87,6 +89,10 @@ $message
      * 耗时，请在子现场调用
      */
     private fun sendDingMessage(message: DingMessage) {
+        if (!::mWebhook.isInitialized || !::mSecret.isInitialized) {
+            Log.e("DingUtil", "请先初始化Webhook和Secret后再使用")
+            return
+        }
         val timestamp = System.currentTimeMillis()
         val sign = try {
             sign(timestamp)
@@ -94,29 +100,19 @@ $message
             e.printStackTrace()
             return
         }
-        val url = "$WEBHOOK&timestamp=${timestamp}&sign=${sign}"
+        val url = "$mWebhook&timestamp=${timestamp}&sign=${sign}"
 
         // 网络请求，用同步方案
-        val toJson = GsonUtil.toJson(message)
-        val request = Request
-            .Builder()
-            .url(url)
-            .post(toJson.toRequestBody("application/json".toMediaType()))
-            .build()
-        //println("sendDingMessage: requestBody=${request.body}")
-        try {
-            val response = okHttpClient.newCall(request).execute()
-            println("sendDingMessage: code=${response.code}, body=${response.body?.string()}")
-        } catch (e: Exception) {
-            e.printStackTrace()
+        GsonUtil.toJson(message).takeIf { it.isNotBlank() }?.let {
+            RequestUtil.postJson(url, it)
         }
     }
 
     @Throws(Exception::class)
     fun sign(timestamp: Long): String {
-        val stringToSign = "$timestamp\n$SECRET"
+        val stringToSign = "$timestamp\n$mSecret"
         val mac: Mac = Mac.getInstance("HmacSHA256")
-        mac.init(SecretKeySpec(SECRET.toByteArray(), "HmacSHA256"))
+        mac.init(SecretKeySpec(mSecret.toByteArray(), "HmacSHA256"))
         val signData: ByteArray = mac.doFinal(stringToSign.toByteArray())
         return URLEncoder.encode(Base64.encodeToString(signData, Base64.NO_WRAP), "UTF-8")
     }
