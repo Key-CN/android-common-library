@@ -8,6 +8,7 @@ import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.util.Log
 import androidx.annotation.MainThread
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.LifecycleOwner
@@ -15,7 +16,7 @@ import androidx.lifecycle.OnLifecycleEvent
 import io.keyss.library.common.extensions.string
 
 /**
- * 2020/06/18 现在是全局存在，改变答题器状态，和科盟的热插拔相兼容
+ * 2020/06/18
  */
 class UsbDevicesReceiver : BroadcastReceiver, LifecycleObserver {
 
@@ -54,7 +55,7 @@ class UsbDevicesReceiver : BroadcastReceiver, LifecycleObserver {
     @OnLifecycleEvent(Lifecycle.Event.ON_CREATE)
     fun onCreate() {
         mContext?.let {
-            registerReceiver(it, onReceiveListener!!)
+            registerReceiver(it, true, onReceiveListener!!)
         }
     }
 
@@ -109,15 +110,34 @@ class UsbDevicesReceiver : BroadcastReceiver, LifecycleObserver {
 
         /**
          * 可以注册多个，所以请自行管理
+         * @param isReceiveExistingImmediately 是否立刻返回已存在的设备
          * fixme 目前这样一个activity内的只会存在一个
          */
-        fun registerReceiver(context: Context, onReceiveListener: ((isAttached: Boolean, device: UsbDevice) -> Unit)) {
+        fun registerReceiver(
+            context: Context,
+            isReceiveExistingImmediately: Boolean = true,
+            onReceiveListener: ((isAttached: Boolean, device: UsbDevice) -> Unit)
+        ) {
             val usbDevicesReceiver = UsbDevicesReceiver(onReceiveListener)
             context.registerReceiver(usbDevicesReceiver, getIntentFilter())
             mUsbDevicesReceivers[context.hashCode()]?.also {
                 it.add(usbDevicesReceiver)
             } ?: kotlin.run {
                 mUsbDevicesReceivers[context.hashCode()] = mutableListOf(usbDevicesReceiver)
+            }
+
+            // 立刻返回已存在的设备
+            if (isReceiveExistingImmediately) {
+                val mUsbManager = ContextCompat.getSystemService(context, UsbManager::class.java)
+                mUsbManager?.deviceList?.let { map ->
+                    map.forEach {
+                        // key是name，也就是节点 e.g. /dev/bus/usb/004/003
+                        //Log.i(TAG, "已接入的：${it.key}: ${it.value}")
+                        it.value?.let { usbDevice ->
+                            onReceiveListener(true, usbDevice)
+                        }
+                    }
+                }
             }
             if (debug) {
                 Log.i(TAG, "Register Receiver: $usbDevicesReceiver")

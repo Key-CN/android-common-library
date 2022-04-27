@@ -11,9 +11,11 @@ import javax.crypto.spec.SecretKeySpec
 /**
  * @author Key
  * Time: 2021/05/25 17:13
- * Description:
+ * Description: 每个机器人每分钟最多发送20条消息到群里，如果超过20条，会限流10分钟。
  */
 object DingUtil {
+    private const val WEBHOOK_PREFIX = "https://oapi.dingtalk.com/robot/send?access_token="
+
     private lateinit var mWebhook: String
     private lateinit var mSecret: String
 
@@ -31,8 +33,16 @@ object DingUtil {
     var markdownTemplate = ""
 
 
+    /**
+     * @param webhook 包含accessToken
+     */
     fun init(webhook: String, secret: String) {
         mWebhook = webhook
+        mSecret = secret
+    }
+
+    fun initByAccessToken(accessToken: String, secret: String) {
+        mWebhook = WEBHOOK_PREFIX + accessToken
         mSecret = secret
     }
 
@@ -89,15 +99,15 @@ object DingUtil {
      * 耗时，请在子现场调用
      */
     private fun sendDingMessage(message: DingMessage) {
-        if (!::mWebhook.isInitialized || !::mSecret.isInitialized) {
-            Log.e("DingUtil", "请先初始化Webhook和Secret后再使用")
+        if (!::mWebhook.isInitialized || mWebhook.isNullOrBlank()) {
+            Log.e("DingUtil", "请先初始化后再使用")
             return
         }
         val timestamp = System.currentTimeMillis()
         val sign = try {
             sign(timestamp)
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("DingUtil", "签名出错", e)
             return
         }
         val url = "$mWebhook&timestamp=${timestamp}&sign=${sign}"
@@ -110,6 +120,9 @@ object DingUtil {
 
     @Throws(Exception::class)
     fun sign(timestamp: Long): String {
+        if (!::mSecret.isInitialized || mSecret.isNullOrBlank()) {
+            throw Exception("Secret未初始化")
+        }
         val stringToSign = "$timestamp\n$mSecret"
         val mac: Mac = Mac.getInstance("HmacSHA256")
         mac.init(SecretKeySpec(mSecret.toByteArray(), "HmacSHA256"))

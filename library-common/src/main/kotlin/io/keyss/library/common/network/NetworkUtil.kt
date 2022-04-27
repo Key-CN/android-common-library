@@ -10,6 +10,7 @@ import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
+import io.keyss.library.common.extensions.toHexString
 import io.keyss.library.common.utils.ShellUtil
 import java.io.File
 import java.net.*
@@ -21,6 +22,7 @@ import java.net.*
  * Description:
  */
 object NetworkUtil {
+    private const val TAG = "NetworkUtil"
 
     /**
      * IP address       HW type     Flags       HW address            Mask     Device
@@ -249,6 +251,13 @@ object NetworkUtil {
     }
 
     /**
+     * 没权限会是unknown
+     */
+    fun getWifiName(context: Context): String {
+        return getWifiInfo(context)?.ssid?.removeSurrounding("\"", "\"") ?: "获取不到Wi-Fi名"
+    }
+
+    /**
      * 获取当前活跃的网卡信息，双网卡是一般为eth
      */
     @RequiresApi(Build.VERSION_CODES.M)
@@ -263,23 +272,20 @@ object NetworkUtil {
                     linkProperties.interfaceName?.takeIf { it.isNotBlank() }?.let {
                         InterfaceConfig(it)
                     }
+                        // 不为空才继续获取
                         ?.apply {
                             // 获取IP
                             getIPv4Address(linkProperties.linkAddresses)?.let {
                                 addr = it
                             }
-                        }
-                        ?.apply {
                             cm.getNetworkCapabilities(network)?.let { networkCapabilities ->
                                 connectionName = when {
-                                    networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> {
-                                        // 移除前后两个引号
-                                        getWifiInfo(context)?.ssid?.removeSurrounding("\"", "\"") ?: "未获取到Wi-Fi名"
-                                    }
+                                    networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> getWifiName(context)
                                     networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> "以太网"
                                     else -> networkCapabilities.toString()
                                 }
                             }
+                            hardwareAddress = getHardwareAddress(name)
                         }
                 }
             } catch (e: Exception) {
@@ -288,7 +294,7 @@ object NetworkUtil {
             }
         }
         if (ifconfig == null) {
-            (getInterfaceConfigByShell().takeIf { it.isNotEmpty() } ?: getInterfaceConfigByApi().takeIf { it.isNotEmpty() })?.let {
+            (getInterfaceConfigByShell(context).takeIf { it.isNotEmpty() } ?: getInterfaceConfigByApi(context).takeIf { it.isNotEmpty() })?.let {
                 if (it.size == 1) {
                     ifconfig = it[0]
                 } else {
@@ -308,41 +314,51 @@ object NetworkUtil {
      * 采用shell的方式获取网卡信息
      */
     @JvmStatic
-    fun getInterfaceConfigByShell(ignoreEmptyIp: Boolean = true, ignoreLoopback: Boolean = true): MutableList<InterfaceConfig> {
+    fun getInterfaceConfigByShell(
+        context: Context? = null,
+        ignoreEmptyIp: Boolean = true,
+        ignoreLoopback: Boolean = true
+    ): MutableList<InterfaceConfig> {
         val list: MutableList<InterfaceConfig> = mutableListOf<InterfaceConfig>()
-        ShellUtil.executeShell("ifconfig", { br ->
+        ShellUtil.executeShellStream("ifconfig", inputBlock = { br ->
             var tempInterface: InterfaceConfig? = null
             br.forEachLine { lineStr ->
                 if (!lineStr.startsWith(" ") && lineStr.isNotBlank()) {
                     val name = lineStr.takeWhile { it != ' ' }
-                    tempInterface = InterfaceConfig(name)
+                    // 顺便 add mac
+                    tempInterface = InterfaceConfig(name = name, hardwareAddress = getHardwareAddress(name))
                 } else {
-                    tempInterface?.let {
+                    tempInterface?.let { ifc ->
                         when {
                             lineStr.isEmpty() -> {
                                 // 一个信息块结束
                                 // 接口名必须存在，IP不忽略或不为空
                                 // 忽略localhost
-                                if (it.name.isNotBlank() && (!ignoreEmptyIp || it.addr.isNotBlank()) && !(ignoreLoopback && (it.name == "lo" || it.addr == "127.0.0.1"))) {
-                                    list.add(it)
+                                if (ifc.name.isNotBlank() && (!ignoreEmptyIp || ifc.addr.isNotBlank()) && !(ignoreLoopback && (ifc.name == "lo" || ifc.addr == "127.0.0.1"))) {
+                                    list.add(ifc)
                                 }
                                 tempInterface = null
                             }
                             lineStr.trim().startsWith("inet ") -> {
                                 // inet addr:127.0.0.1  Mask:255.0.0.0
                                 // inet addr:192.168.101.3  Bcast:192.168.101.255  Mask:255.255.255.0
-                                it.addr = lineStr.substringAfter("addr:").substringBefore(" ")
-                                it.bcast = lineStr.substringAfter("Bcast:").substringBefore(" ")
-                                it.mask = lineStr.substringAfter("Mask:").substringBefore(" ")
+                                // inet6 addr: fe80::346:d372:e7a7:f48a/64 Scope: Link
+                                ifc.addr = lineStr.substringAfter("addr:").substringBefore(" ")
+                                ifc.bcast = lineStr.substringAfter("Bcast:").substringBefore(" ")
+                                ifc.mask = lineStr.substringAfter("Mask:").substringBefore(" ")
                             }
                             else -> {
                                 // ignore
                             }
                         }
+
                     }
                 }
             }
         })
+        if (null != context) {
+            putInWifiName(context, list)
+        }
         return list
     }
 
@@ -351,7 +367,7 @@ object NetworkUtil {
      * 没有IP就没有inetAddresses，会是空[]
      * 所以更推荐使用[getInterfaceConfigByShell]
      */
-    fun getInterfaceConfigByApi(): MutableList<InterfaceConfig> {
+    fun getInterfaceConfigByApi(context: Context? = null): MutableList<InterfaceConfig> {
         val list: MutableList<InterfaceConfig> = mutableListOf<InterfaceConfig>()
         try {
             // length = 0 会返回null
@@ -365,13 +381,68 @@ object NetworkUtil {
                 // Enumeration 无法判空
                 for (inetAddress in ni.inetAddresses) {
                     if (inetAddress.isIPv4AndNotLoopback()) {
-                        list.add(InterfaceConfig(ni.name, inetAddress.hostAddress))
+                        inetAddress.address
+                        list.add(
+                            InterfaceConfig(
+                                name = ni.name,
+                                addr = numericToTextFormat(inetAddress.address),
+                                hardwareAddress = ni.hardwareAddress?.toHexString(":") ?: getHardwareAddress(ni.name)
+                            )
+                        )
                         continue
                     }
                 }
             }
         }
+        if (null != context) {
+            putInWifiName(context, list)
+        }
         return list
+    }
+
+    private fun putInWifiName(context: Context, list: List<InterfaceConfig>) {
+        getWifiInfo(context)?.let {
+            for (interfaceConfig in list) {
+                // 主备不一定哪个是活跃，所以最好还是用活跃网卡做处理
+                if (interfaceConfig.name.startsWith("wlan") && intToIPv4(it.ipAddress) == interfaceConfig.addr) {
+                    interfaceConfig.connectionName = it.ssid.removeSurrounding("\"", "\"")
+                    // 一般的Android不可能存在两个Wi-Fi，新款手机，类似小米，5G连了之后，2.4G可以连一个备用Wi-Fi,这样的话一般wlan0主，wlan1备
+                    break
+                }
+            }
+        }
+    }
+
+    /**
+     * shell读取硬件地址的文件
+     * 一般：/sys/class/net/eth0/address
+     * /sys/class/net/wlan0
+     * 可以ls /sys/class/net路径下查看机器所含接口
+     * 不需要su权限可以读取，但是有些手机可能是不行的
+     */
+    fun getHardwareAddress(interfaceName: String): String {
+        val executeResult = ShellUtil.executeShell("cat /sys/class/net/${interfaceName}/address")
+        return if (executeResult.success) {
+            Log.i(TAG, "getHardwareAddress: $interfaceName - ${executeResult.text}")
+            executeResult.text.trimIndent()
+        } else {
+            Log.e(TAG, "获取Mac地址出错：${executeResult.text}")
+            ""
+        }
+    }
+
+    /**
+     * 需要权限
+     */
+    fun getAllInterfaceList(): List<String> {
+        val executeResult = ShellUtil.executeSuShell("ls /sys/class/net/")
+        return if (executeResult.success) {
+            Log.i(TAG, "getAllInterfaceList: ${executeResult.text}")
+            executeResult.text.trimIndent().split("\\s+".toRegex())
+        } else {
+            Log.e(TAG, "获取网卡列表出错：${executeResult.text}")
+            emptyList()
+        }
     }
 
     @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
@@ -410,6 +481,16 @@ object NetworkUtil {
     }
 
     /**
+     * 参考Inet4Address类
+     */
+    fun numericToTextFormat(src: ByteArray?): String {
+        if (null == src || src.size != 4) {
+            return ""
+        }
+        return src.joinToString(".") { it.toUByte().toString() }
+    }
+
+    /**
      * 设置公共DNS
      */
     fun setPublicDNS() {
@@ -441,7 +522,7 @@ object NetworkUtil {
             delay = System.currentTimeMillis() - start
             conn.disconnect()
         } catch (e: Exception) {
-            Log.w("NetworkUtil", "请求错误, url = [$url], error = ${e.message}", e)
+            Log.w(TAG, "请求错误, url = [$url], error = ${e.message}", e)
         }
         return delay
     }

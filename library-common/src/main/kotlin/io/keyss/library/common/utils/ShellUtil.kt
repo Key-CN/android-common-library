@@ -1,6 +1,7 @@
 package io.keyss.library.common.utils
 
 import java.io.BufferedReader
+import java.io.BufferedWriter
 
 /**
  * @author Key
@@ -25,7 +26,7 @@ object ShellUtil {
         val process = try {
             if (cmd.size == 1) runtime.exec(cmd[0]) else runtime.exec(cmd)
         } catch (e: Exception) {
-            return Result(false, "命令执行错误，error：${e}")
+            return Result(false, "命令执行错误，Exception: $e")
         }
         val normalText = try {
             process.inputStream.bufferedReader().use { br ->
@@ -64,7 +65,12 @@ object ShellUtil {
         return result
     }
 
-    fun executeShell(cmd: String, inputBlock: (br: BufferedReader) -> Unit, errorBlock: ((br: BufferedReader) -> Unit)? = null) {
+    fun executeShellStream(
+        cmd: String,
+        outputBlock: ((br: BufferedWriter) -> Unit)? = null,
+        inputBlock: ((br: BufferedReader) -> Unit)? = null,
+        errorBlock: ((br: BufferedReader) -> Unit)? = null
+    ) {
         val runtime = Runtime.getRuntime()
         val process = try {
             runtime.exec(cmd)
@@ -72,13 +78,25 @@ object ShellUtil {
             e.printStackTrace()
             return
         }
+
         try {
-            process.inputStream.bufferedReader().use { br ->
-                inputBlock(br)
+            process.outputStream.bufferedWriter().use { br ->
+                outputBlock?.invoke(br)
+                // buffer,防止调用者忘记
+                br.flush()
             }
         } catch (e: Exception) {
             e.printStackTrace()
         }
+
+        try {
+            process.inputStream.bufferedReader().use { br ->
+                inputBlock?.invoke(br)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
         try {
             process.errorStream.bufferedReader().use { br ->
                 errorBlock?.invoke(br)
@@ -86,11 +104,12 @@ object ShellUtil {
         } catch (e: Exception) {
             e.printStackTrace()
         }
+
         if (try {
                 process.exitValue()
                 false
             } catch (e: IllegalThreadStateException) {
-                e.printStackTrace()
+                //e.printStackTrace()
                 true
             }
         ) {
