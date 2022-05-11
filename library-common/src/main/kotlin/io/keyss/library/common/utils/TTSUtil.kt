@@ -68,7 +68,7 @@ object TTSUtil : TextToSpeech.OnInitListener {
             if (result >= TextToSpeech.LANG_AVAILABLE) {
                 isInitSuccess = true
             }
-            Log.i("TTSUtil", "设置语言结果：${tts.voice}=${result}")
+            Log.i("TTSUtil", "设置语言结果：[${tts.voice}]=[${result}]")
         }
     }
 
@@ -78,7 +78,7 @@ object TTSUtil : TextToSpeech.OnInitListener {
             return false
         }
         val result = tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, null) == TextToSpeech.SUCCESS
-        Log.i("TTSUtil", "speak结果：${result}")
+        Log.i("TTSUtil", "speak: $text, 结果: $result")
         return result
     }
 }

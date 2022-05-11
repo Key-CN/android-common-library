@@ -11,16 +11,11 @@ import io.keyss.library.aliyun.Log
  * Description:
  */
 class App : Application() {
-    companion object {
-        var globalTime = 0
-    }
 
     override fun onCreate() {
-        globalTime++
         super.onCreate()
         Log.defaultDepth = 8
         Log.setTopic("common-library-test-app")
-        Log.w("!!!!!!!!!!!!!!! Application onCreate !!!!!!!!!!!!!!!\nglobalTime=$globalTime")
         val cb = object : ActivityLifecycleCallbacks {
             override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
                 Log.i("onActivityCreated: activity = [${activity}], savedInstanceState = [${savedInstanceState}]")

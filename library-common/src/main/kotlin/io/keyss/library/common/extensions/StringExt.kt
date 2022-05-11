@@ -31,3 +31,51 @@ fun Byte.toHexString(): String {
  */
 fun ByteArray.toAsciiString(separator: CharSequence = "") =
     this.map { it.toInt().toChar() }.joinToString(separator)
+
+/**
+ * 错误不会throw但是值会不对
+ */
+fun String.passeByteArray(): ByteArray {
+    val bytes = ByteArray(length / 2)
+    var j = 0
+    for (i in bytes.indices) {
+        val c0: Char = this[j++]
+        val c1: Char = this[j++]
+        bytes[i] = (parse(c0) shl 4 or parse(c1)).toByte()
+    }
+    return bytes
+}
+
+/**
+ * 会throw
+ */
+@Throws
+fun String.passeByteArrayOrThrow(): ByteArray {
+    val bytes = ByteArray(length / 2)
+    var i = 0
+    var j = 0
+    while (i < bytes.size) {
+        bytes[i++] = "${this[j++]}${this[j++]}".toUByte(16).toByte()
+    }
+    return bytes
+}
+
+/**
+ * UByteArray kotlin中还是实验性的
+ */
+@Throws
+@ExperimentalUnsignedTypes
+fun String.passeUByteArray(): UByteArray {
+    val bytes = UByteArray(length / 2)
+    var i = 0
+    var j = 0
+    while (i < bytes.size) {
+        bytes[i++] = "${this[j++]}${this[j++]}".toUByte(16)
+    }
+    return bytes
+}
+
+private fun parse(c: Char): Int {
+    if (c >= 'a') return c - 'a' + 10 and 0x0f
+    return if (c >= 'A') c - 'A' + 10 and 0x0f else c - '0' and 0x0f
+}
