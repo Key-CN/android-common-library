@@ -70,6 +70,7 @@ object AliyunLogUtil {
     /**
      * 调用行函数所在深度，自行测试后设定
      */
+    @JvmField
     var defaultDepth = 7
 
     /** 上传日志的等级 */
@@ -306,22 +307,62 @@ object AliyunLogUtil {
         }
     }
 
+    @JvmStatic
+    fun v(log: Any?) {
+        printAndUploadLog(Log.VERBOSE, log, 0)
+    }
+
+    @JvmStatic
     fun v(log: Any?, deeper: Int = 0) {
         printAndUploadLog(Log.VERBOSE, log, deeper)
     }
 
+    @JvmStatic
+    fun d(log: Any?) {
+        printAndUploadLog(Log.DEBUG, log, 0)
+    }
+
+    @JvmStatic
     fun d(log: Any?, deeper: Int = 0) {
         printAndUploadLog(Log.DEBUG, log, deeper)
     }
 
+    @JvmStatic
+    fun i(log: Any?) {
+        printAndUploadLog(Log.INFO, log, 0)
+    }
+
+    @JvmStatic
     fun i(log: Any?, deeper: Int = 0) {
         printAndUploadLog(Log.INFO, log, deeper)
     }
 
+    @JvmStatic
+    fun w(log: Any?) {
+        printAndUploadLog(Log.WARN, log, -1, null)
+    }
+
+    @JvmStatic
+    fun w(log: Any?, tr: Throwable?) {
+        printAndUploadLog(Log.WARN, log, -1, tr)
+    }
+
+    @JvmStatic
     fun w(log: Any?, tr: Throwable? = null, deeper: Int = -1) {
         printAndUploadLog(Log.WARN, log, deeper, tr)
     }
 
+    @JvmStatic
+    fun e(log: Any?) {
+        printAndUploadLog(Log.ERROR, log, -1, null)
+    }
+
+    @JvmStatic
+    fun e(log: Any?, tr: Throwable?) {
+        printAndUploadLog(Log.ERROR, log, -1, tr)
+    }
+
+    @JvmStatic
     fun e(log: Any?, tr: Throwable? = null, deeper: Int = -1) {
         printAndUploadLog(Log.ERROR, log, deeper, tr)
     }
@@ -348,7 +389,8 @@ object AliyunLogUtil {
     private fun formatLogMessage(log: Any?, deeper: Int, tr: Throwable?): String {
         val logBuilder = StringBuilder(getLogString(log, deeper))
         if (tr != null) {
-            logBuilder.appendLine().append(Log.getStackTraceString(tr))
+            //logBuilder.appendLine().append(Log.getStackTraceString(tr))
+            logBuilder.appendLine().append(tr.stackTraceToString())
         }
         return logBuilder.toString()
     }

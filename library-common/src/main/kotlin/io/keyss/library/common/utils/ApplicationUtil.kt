@@ -24,6 +24,16 @@ import kotlin.system.exitProcess
 object ApplicationUtil {
     private var mApp: Application? = null
 
+    @JvmStatic
+    fun init(app: Application) {
+        if (mApp != null) {
+            return
+        }
+        mApp = app
+        ActivityManager.init(app)
+    }
+
+    @JvmStatic
     fun getApplication(): Application? {
         if (null == mApp) {
             mApp = getCurrentApplicationByReflect() ?: getApplicationByReflect()

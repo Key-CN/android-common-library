@@ -260,6 +260,7 @@ object NetworkUtil {
     /**
      * 获取当前活跃的网卡信息，双网卡是一般为eth
      */
+    @JvmStatic
     @RequiresApi(Build.VERSION_CODES.M)
     fun getActiveInterfaceConfig(context: Context, isEthernetFirst: Boolean = true): InterfaceConfig? {
         var ifconfig: InterfaceConfig? = null
