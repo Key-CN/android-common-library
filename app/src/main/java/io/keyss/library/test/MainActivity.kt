@@ -1,5 +1,6 @@
 package io.keyss.library.test
 
+import android.Manifest
 import android.hardware.Camera
 import android.os.Bundle
 import androidx.lifecycle.lifecycleScope
@@ -7,6 +8,7 @@ import io.keyss.library.aliyun.Log
 import io.keyss.library.common.base.BaseReflectBindingActivity
 import io.keyss.library.common.ding.DingUtil
 import io.keyss.library.common.network.NetworkUtil
+import io.keyss.library.common.utils.ActivityManager
 import io.keyss.library.common.utils.ShellUtil
 import io.keyss.library.test.databinding.ActivityMainBinding
 import kotlinx.coroutines.Dispatchers
@@ -63,6 +65,20 @@ class MainActivity : BaseReflectBindingActivity<ActivityMainBinding>() {
             mBinding.tvMainActivity.text = sb.toString()
         }
         //sendDing()
+        testPermission()
+    }
+
+    private fun testPermission() {
+        Log.i("testPermission")
+        // 启动一个等待返回的
+        ActivityManager.launchForTopActivityRequestPermission(Manifest.permission.ACTIVITY_RECOGNITION) {
+            Log.i("checkAndRequestPermission() ACTIVITY_RECOGNITION=[${it}]")
+            if (it) {
+                Log.i("onPermissionPassed")
+            } else {
+                Log.i("不授予权限无法获取步数！")
+            }
+        }
     }
 
     private fun sendDing() {
