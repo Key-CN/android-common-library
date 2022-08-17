@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.Application
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -107,9 +108,21 @@ object ActivityManager : Application.ActivityLifecycleCallbacks {
 
     /**
      * RequestPermission
+     * 优化一下，先判断后请求
      */
     fun launchForTopActivityRequestPermission(permission: String, activityResultCallback: ActivityResultCallback<Boolean>? = null) {
-        getTopActivityOnePermissionLauncher()?.launch(permission, activityResultCallback)
+        when (PermissionUtil.queryPermission(permission, getTopActivity()!!)) {
+            PackageManager.PERMISSION_GRANTED -> {
+                activityResultCallback?.onActivityResult(true)
+            }
+            -2 -> {
+                activityResultCallback?.onActivityResult(false)
+            }
+            else -> {
+                /*包括 PackageManager.PERMISSION_DENIED*/
+                getTopActivityOnePermissionLauncher()?.launch(permission, activityResultCallback)
+            }
+        }
     }
 
     /**
@@ -119,6 +132,7 @@ object ActivityManager : Application.ActivityLifecycleCallbacks {
         permissions: Array<String>,
         activityResultCallback: ActivityResultCallback<Map<String, Boolean>>? = null
     ) {
+        // 太多了，算了，懒得写判断了，直接请求吧，需要判断的业务前置吧
         getTopActivityMultiplePermissionLauncher()?.launch(permissions, activityResultCallback)
     }
 
