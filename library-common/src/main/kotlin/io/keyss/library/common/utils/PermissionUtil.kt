@@ -1,5 +1,6 @@
 package io.keyss.library.common.utils
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
@@ -22,6 +23,9 @@ import androidx.core.content.ContextCompat
  */
 object PermissionUtil {
     private const val TAG = "PermissionUtil"
+
+    @JvmStatic
+    private val NotShowRequestPermission: Array<String> = arrayOf(Manifest.permission.ACTIVITY_RECOGNITION)
 
     /**
      * 是否忽略电池优化
@@ -63,24 +67,35 @@ object PermissionUtil {
         }
     }
 
+    /**
+     * 查询是否拥有该权限
+     */
     fun hasPermission(permission: String, context: Context): Boolean {
-        Log.d(TAG, "hasPermission() called with: permission = [$permission]")
-        return ActivityCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+        val checkSelfPermission = ActivityCompat.checkSelfPermission(context, permission)
+        Log.d(TAG, "hasPermission() [$permission] = $checkSelfPermission")
+        return checkSelfPermission == PackageManager.PERMISSION_GRANTED
     }
 
     /**
      * 查询权限
-     *
+     * shouldShowRequestPermissionRationale: 弹窗过的查询才会正确展示，没弹过的只会false
+     * 直译为：是否应该现实请求权限的理由，所以如果没弹过，用户也没拒绝过就不需要show理由
+     * 然而通过记录的方式去实现是不现实的，因为我们无法控制整个app，只通过一个方法去请求权限（除非强制规定所有开发人员的使用规范）
+     * 所以，该方法暂时废弃
      * @param permissionStr android权限字符串
      * @return 0允许，-1拒绝 or 询问，-2永久拒绝
      */
+    @Deprecated("该方法暂时废弃")
     fun queryPermission(permissionStr: String, activity: Activity): Int {
         var permissionInt = ActivityCompat.checkSelfPermission(activity, permissionStr)
-        if (permissionInt != PackageManager.PERMISSION_GRANTED) {
+        if (permissionInt != PackageManager.PERMISSION_GRANTED && !NotShowRequestPermission.contains(permissionStr)) {
+            // 有一些权限返回是不可以弹窗的，实际是可以的，只能自己逐步记录一下了
+            // android.permission.ACTIVITY_RECOGNITION
             if (!ActivityCompat.shouldShowRequestPermissionRationale(activity, permissionStr)) {
                 permissionInt = -2
             }
         }
+        Log.d(TAG, "queryPermission: $permissionStr=$permissionInt")
         return permissionInt
     }
 

@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.Application
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -111,17 +110,10 @@ object ActivityManager : Application.ActivityLifecycleCallbacks {
      * 优化一下，先判断后请求
      */
     fun launchForTopActivityRequestPermission(permission: String, activityResultCallback: ActivityResultCallback<Boolean>? = null) {
-        when (PermissionUtil.queryPermission(permission, getTopActivity()!!)) {
-            PackageManager.PERMISSION_GRANTED -> {
-                activityResultCallback?.onActivityResult(true)
-            }
-            -2 -> {
-                activityResultCallback?.onActivityResult(false)
-            }
-            else -> {
-                /*包括 PackageManager.PERMISSION_DENIED*/
-                getTopActivityOnePermissionLauncher()?.launch(permission, activityResultCallback)
-            }
+        if (PermissionUtil.hasPermission(permission, getTopActivity()!!)) {
+            activityResultCallback?.onActivityResult(true)
+        } else {
+            getTopActivityOnePermissionLauncher()?.launch(permission, activityResultCallback)
         }
     }
 
