@@ -1,6 +1,5 @@
 package io.keyss.library.common.utils
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
@@ -23,9 +22,6 @@ import androidx.core.content.ContextCompat
  */
 object PermissionUtil {
     private const val TAG = "PermissionUtil"
-
-    @JvmStatic
-    private val NotShowRequestPermission: Array<String> = arrayOf(Manifest.permission.ACTIVITY_RECOGNITION)
 
     /**
      * 是否忽略电池优化
@@ -88,21 +84,23 @@ object PermissionUtil {
     @Deprecated("该方法暂时废弃")
     fun queryPermission(permissionStr: String, activity: Activity): Int {
         var permissionInt = ActivityCompat.checkSelfPermission(activity, permissionStr)
-        if (permissionInt != PackageManager.PERMISSION_GRANTED && !NotShowRequestPermission.contains(permissionStr)) {
+        if (permissionInt != PackageManager.PERMISSION_GRANTED) {
             // 有一些权限返回是不可以弹窗的，实际是可以的，只能自己逐步记录一下了
             // android.permission.ACTIVITY_RECOGNITION
-            if (!ActivityCompat.shouldShowRequestPermissionRationale(activity, permissionStr)) {
+            val shouldShowRequestPermissionRationale = ActivityCompat.shouldShowRequestPermissionRationale(activity, permissionStr)
+            Log.d(TAG, "是否可以显示权限弹窗: $permissionStr=$shouldShowRequestPermissionRationale")
+            if (!shouldShowRequestPermissionRationale) {
                 permissionInt = -2
             }
         }
-        Log.d(TAG, "queryPermission: $permissionStr=$permissionInt")
+        Log.d(TAG, "查询权限: $permissionStr=$permissionInt")
         return permissionInt
     }
 
     /**
      * 仅在onCreate中可用，自己写的Activity时可以用
      */
-    fun requestOnePermission(permission: String, activity: ComponentActivity, resultAction: ((Boolean) -> Unit)? = null) {
+    fun requestOnePermission(activity: ComponentActivity, permission: String, resultAction: ((Boolean) -> Unit)? = null) {
         if (hasPermission(permission, activity)) {
             resultAction?.invoke(true)
         } else {
@@ -115,8 +113,9 @@ object PermissionUtil {
 
     /**
      * 仅在onCreate中可用，自己写的Activity时可以用
+     * @param permissions 动态参，或者数组指针，e.g. *permissions3
      */
-    fun requestMultiplePermissions(permissions: Array<String>, activity: ComponentActivity, resultAction: ((Map<String, Boolean>) -> Unit)? = null) {
+    fun requestMultiPermissions(activity: ComponentActivity, vararg permissions: String, resultAction: ((Map<String, Boolean>) -> Unit)? = null) {
         if (permissions.all { hasPermission(it, activity) }) {
             val map = HashMap<String, Boolean>()
             for (permission in permissions) {
@@ -127,7 +126,7 @@ object PermissionUtil {
             val launcher = activity.registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
                 resultAction?.invoke(it)
             }
-            launcher.launch(permissions)
+            launcher.launch(arrayOf(*permissions))
         }
     }
 }

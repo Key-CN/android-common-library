@@ -1,18 +1,18 @@
 object versions {
-    const val compileSdk = 31
-    const val minSdk = 21
-    const val targetSdk = 31
+    const val compileSdk = 33
+    const val minSdk = 23
+    const val targetSdk = 33
 
-    const val kotlin = "1.6.21"
-    const val kotlin_coroutines = "1.6.0"
-    const val ktx = "1.7.0"
-    const val appcompat = "1.4.1"
-    const val annotation = "1.3.0"
-    const val lifecycle = "2.4.0"
-    const val material = "1.5.0"
-    const val constraintlayout = "2.1.3"
+    const val kotlin = "1.7.20"
+    const val kotlin_coroutines = "1.6.4"
+    const val ktx = "1.9.0"
+    const val appcompat = "1.6.0"
+    const val annotation = "1.5.0"
+    const val lifecycle = "2.5.1"
+    const val material = "1.7.0"
+    const val constraintlayout = "2.1.4"
 
-    const val okhttp3 = "4.9.3"
+    const val okhttp3 = "4.10.0"
 }
 
 object deps {

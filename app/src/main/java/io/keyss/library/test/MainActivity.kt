@@ -9,6 +9,7 @@ import io.keyss.library.common.base.BaseReflectBindingActivity
 import io.keyss.library.common.ding.DingUtil
 import io.keyss.library.common.network.NetworkUtil
 import io.keyss.library.common.utils.ActivityManager
+import io.keyss.library.common.utils.PermissionUtil
 import io.keyss.library.common.utils.ShellUtil
 import io.keyss.library.test.databinding.ActivityMainBinding
 import kotlinx.coroutines.Dispatchers
@@ -65,10 +66,39 @@ class MainActivity : BaseReflectBindingActivity<ActivityMainBinding>() {
             mBinding.tvMainActivity.text = sb.toString()
         }
         //sendDing()
+        //testActivityManagerPermission()
         testPermission()
     }
 
+    private val permissions2 = arrayOf(
+        Manifest.permission.ACCESS_FINE_LOCATION,
+        Manifest.permission.ACCESS_COARSE_LOCATION,
+    )
+
+    private val permissions3 = arrayOf(
+        Manifest.permission.ACCESS_FINE_LOCATION,
+        Manifest.permission.ACCESS_COARSE_LOCATION,
+        Manifest.permission.ACCESS_BACKGROUND_LOCATION,
+    )
+
     private fun testPermission() {
+        PermissionUtil.requestMultiPermissions(
+            this,
+            *permissions2
+        ) { map3 ->
+            Log.i("testPermission.map3: $map3")
+            if (map3.all { it.value }) {
+                PermissionUtil.requestMultiPermissions(
+                    this,
+                    *permissions3
+                ) { map2 ->
+                    Log.i("testPermission.map2: $map2")
+                }
+            }
+        }
+    }
+
+    private fun testActivityManagerPermission() {
         Log.i("testPermission")
         // 启动一个等待返回的
         ActivityManager.launchForTopActivityRequestPermission(Manifest.permission.ACTIVITY_RECOGNITION) {

@@ -35,7 +35,7 @@ android {
 
 dependencies {
     // 阿里云日志
-    implementation("com.aliyun.openservices:aliyun-log-android-sdk:2.6.4")
+    implementation("com.aliyun.openservices:aliyun-log-android-sdk:2.6.10")
 }
 
 // 将library上传到iShow mavenCenter的脚本

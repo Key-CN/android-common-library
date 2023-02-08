@@ -4,8 +4,8 @@ plugins {
     kotlin("android")
 }
 
-val libVersion by extra("1.0.27-SNAPSHOT")
-//val libVersion by extra("1.0.26")
+//val libVersion by extra("1.0.27-SNAPSHOT")
+val libVersion by extra("1.0.27")
 
 android {
     compileSdkVersion(versions.compileSdk)
@@ -47,14 +47,14 @@ dependencies {
     compileOnly(deps.kotlin.coroutines_android)
     compileOnly(deps.androidx.lifecycle_only)
     compileOnly(deps.square.okhttp3)
-    // 只是为了image数据转换的工具类
-    compileOnly("androidx.camera:camera-core:1.1.0-beta01")
     // viewBinding需要
     implementation(deps.androidx.annotation)
     // kotlin的反射库
     implementation(kotlin("reflect"))
+    // 只是为了image数据转换的工具类
+    compileOnly("androidx.camera:camera-core:1.2.0")
     // 转换工具类，实际还是依赖项目中使用的Gson
-    compileOnly("com.google.code.gson:gson:2.9.0")
+    compileOnly("com.google.code.gson:gson:2.10.1")
 }
 
 // 将library上传到iShow mavenCenter的脚本

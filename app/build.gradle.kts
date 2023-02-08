@@ -44,7 +44,6 @@ dependencies {
     testImplementation("junit:junit:+")
     androidTestImplementation("androidx.test.ext:junit:+")
     androidTestImplementation("androidx.test.espresso:espresso-core:+")
-    implementation(deps.google.material)
     implementation(deps.ktx.core)
     implementation(deps.androidx.appcompat)
     implementation(deps.androidx.constraint_layout)
@@ -54,6 +53,6 @@ dependencies {
     implementation(project(":library-aliyunlog"))
     implementation(project(":library-id"))
     implementation(kotlin("reflect"))
-    implementation("com.google.code.gson:gson:2.9.0")
+    implementation("com.google.code.gson:gson:2.10.1")
     implementation(deps.square.okhttp3)
 }
